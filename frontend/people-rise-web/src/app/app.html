@@ -1,0 +1,161 @@
+<div class="shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true"><i class="ti ti-layers-subtract"></i></div>
+      <div>
+        <div class="brand-name">People Rise</div>
+        <div class="brand-sub">{{ i18n.t('app.subtitle') }}</div>
+      </div>
+    </div>
+
+    <!-- Workspace / active-client selector -->
+    <div class="workspace-sel">
+      <i class="ti ti-building" aria-hidden="true"></i>
+      @if (session.tenants().length <= 1) {
+        <span class="ws-name">{{ session.activeTenant()?.name ?? i18n.t('tenant.select') }}</span>
+      } @else {
+        <select [ngModel]="session.tenantId()" (ngModelChange)="onTenantChange($event)"
+                [attr.aria-label]="i18n.t('tenant.active')">
+          <option [ngValue]="null">{{ i18n.t('tenant.select') }}</option>
+          @for (t of session.tenants(); track t.tenantId) {
+            <option [ngValue]="t.tenantId">{{ t.name }}</option>
+          }
+        </select>
+      }
+      <button class="icon subtle ws-refresh" (click)="refreshTenants()"
+              [title]="i18n.t('common.refresh')" [attr.aria-label]="i18n.t('common.refresh')">
+        <i class="ti ti-refresh" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <nav class="nav" aria-label="Main navigation">
+
+      <a class="nav-item" routerLink="/dashboard" routerLinkActive="active"
+         [routerLinkActiveOptions]="{exact: true}">
+        <i class="ti ti-layout-dashboard" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.dashboard') }}</span>
+      </a>
+
+      <div class="nav-section-label">{{ i18n.t('nav.groupDesign') }}</div>
+
+      <a class="nav-item" routerLink="/jobs" routerLinkActive="active">
+        <i class="ti ti-briefcase" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.jobLibrary') }}</span>
+      </a>
+
+      <a class="nav-item" routerLink="/evaluation" routerLinkActive="active">
+        <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.evaluation') }}</span>
+        @if (pendingCount() > 0) {
+          <span class="nav-badge" [attr.aria-label]="pendingCount() + ' pending'">{{ pendingCount() }}</span>
+        }
+      </a>
+
+      <a class="nav-item" routerLink="/grading" routerLinkActive="active">
+        <i class="ti ti-table" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.grading') }}</span>
+      </a>
+
+      <a class="nav-item" routerLink="/salary" routerLinkActive="active">
+        <i class="ti ti-chart-bar" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.salary') }}</span>
+      </a>
+
+      <div class="nav-section-label">{{ i18n.t('nav.groupConfig') }}</div>
+
+      <a class="nav-item" routerLink="/settings/structure" routerLinkActive="active">
+        <i class="ti ti-layout-grid" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.taxonomy') }}</span>
+      </a>
+
+      <a class="nav-item" routerLink="/methodology" routerLinkActive="active">
+        <i class="ti ti-file-text" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.methodology') }}</span>
+      </a>
+
+      <a class="nav-item" routerLink="/settings" routerLinkActive="active"
+         [routerLinkActiveOptions]="{exact: true}">
+        <i class="ti ti-settings" aria-hidden="true"></i>
+        <span>{{ i18n.t('nav.settings') }}</span>
+      </a>
+
+    </nav>
+
+    <!-- User footer -->
+    <div class="sidebar-foot">
+      <div class="user-row">
+        <div class="user-avatar" aria-hidden="true">{{ userInitials() }}</div>
+        <div class="user-info">
+          <div class="user-name">Dev User</div>
+          <div class="user-role">Consultant</div>
+        </div>
+        <button class="icon subtle" (click)="theme.toggle()"
+                [attr.aria-label]="theme.theme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
+          <i [class]="theme.theme() === 'light' ? 'ti ti-moon' : 'ti ti-sun'" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title">{{ pageTitle() }}</div>
+      </div>
+      <div class="topbar-right">
+        <!-- Language -->
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button [class.on]="i18n.lang() === 'en'" (click)="i18n.set('en')">EN</button>
+          <button [class.on]="i18n.lang() === 'ar'" (click)="i18n.set('ar')">ع</button>
+        </div>
+      </div>
+    </header>
+
+    @if (error()) {
+      <div class="alert error" style="margin: 1rem 1.5rem 0">{{ error() }}</div>
+    }
+    @if (!session.hasTenant()) {
+      <div class="alert info" style="margin: 1rem 1.5rem 0">{{ i18n.t('dash.noTenant') }}</div>
+    }
+
+    <div class="page">
+      <router-outlet />
+    </div>
+  </main>
+
+  <!-- ── Toast stack ── -->
+  <div class="toast-stack" aria-live="polite" aria-atomic="false">
+    @for (t of toast.messages(); track t.id) {
+      <div class="toast toast-{{ t.kind }}" role="alert">
+        <span>{{ t.text }}</span>
+        <button class="toast-dismiss" (click)="toast.dismiss(t.id)"
+                [attr.aria-label]="'Dismiss notification'">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ── Confirm dialog ── -->
+  @if (confirm.pending(); as dlg) {
+    <div class="modal-backdrop" (click)="confirm.respond(false)">
+      <div class="modal" role="dialog" aria-modal="true"
+           aria-labelledby="confirm-dlg-title" (click)="$event.stopPropagation()">
+        <h2 id="confirm-dlg-title">{{ dlg.options.title }}</h2>
+        @if (dlg.options.body) { <p>{{ dlg.options.body }}</p> }
+        <div class="modal-actions">
+          <button class="subtle" (click)="confirm.respond(false)">
+            {{ dlg.options.cancelLabel ?? i18n.t('common.cancel') }}
+          </button>
+          <button [class.danger]="dlg.options.danger" (click)="confirm.respond(true)" autofocus>
+            {{ dlg.options.confirmLabel ?? i18n.t('confirm.ok') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
