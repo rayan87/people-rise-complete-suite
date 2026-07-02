@@ -7,6 +7,13 @@
       "runtimeArgs": ["start", "--prefix", "frontend/people-rise-web"],
       "port": 4200,
       "autoPort": false
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/PeopleRise.Api"],
+      "port": 5080,
+      "autoPort": false
     }
   ]
 }

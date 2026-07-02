@@ -33,11 +33,20 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
                   <div class="question">
                     <div class="q-text">{{ i18n.name(q.questionTextEn, q.questionTextAr) }}</div>
                     <div class="opts">
-                      @for (o of q.options; track o.id) {
-                        <label class="opt">
-                          <input type="radio" [name]="q.id" [checked]="selections()[q.id] === o.id" (change)="select(q.id, o.id)" />
-                          <span>{{ i18n.name(o.labelEn, o.labelAr) }}</span>
-                        </label>
+                      @if (q.questionType === 'MultipleChoice') {
+                        @for (o of q.options; track o.id) {
+                          <label class="opt">
+                            <input type="checkbox" [checked]="isSelected(q.id, o.id)" (change)="toggle(q.id, o.id)" />
+                            <span>{{ i18n.name(o.labelEn, o.labelAr) }}</span>
+                          </label>
+                        }
+                      } @else {
+                        @for (o of q.options; track o.id) {
+                          <label class="opt">
+                            <input type="radio" [name]="q.id" [checked]="isSelected(q.id, o.id)" (change)="select(q.id, o.id)" />
+                            <span>{{ i18n.name(o.labelEn, o.labelAr) }}</span>
+                          </label>
+                        }
                       }
                     </div>
                   </div>
@@ -95,12 +104,12 @@ export class EvaluationDetail {
   readonly i18n = inject(I18n);
   readonly evaluation = signal<EvaluationResult | null>(null);
   readonly version = signal<MethodologyVersionDetail | null>(null);
-  readonly selections = signal<Record<string, string>>({});
+  readonly selections = signal<Record<string, string[]>>({});
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
 
   readonly totalQuestions = computed(() => (this.version()?.factors ?? []).reduce((n, f) => n + f.questions.length, 0));
-  readonly answeredCount = computed(() => Object.keys(this.selections()).length);
+  readonly answeredCount = computed(() => Object.values(this.selections()).filter((ids) => ids.length > 0).length);
   readonly allAnswered = computed(() => this.totalQuestions() > 0 && this.answeredCount() === this.totalQuestions());
 
   private get id() { return this.route.snapshot.paramMap.get('id')!; }
@@ -115,13 +124,23 @@ export class EvaluationDetail {
     } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load evaluation.'); }
   }
 
-  select(q: string, o: string) { this.selections.update((s) => ({ ...s, [q]: o })); }
+  isSelected(q: string, o: string) { return (this.selections()[q] ?? []).includes(o); }
+  select(q: string, o: string) { this.selections.update((s) => ({ ...s, [q]: [o] })); }
+  toggle(q: string, o: string) {
+    this.selections.update((s) => {
+      const current = s[q] ?? [];
+      const next = current.includes(o) ? current.filter((id) => id !== o) : [...current, o];
+      return { ...s, [q]: next };
+    });
+  }
 
   async submit() {
     if (!this.allAnswered()) return;
     this.busy.set(true); this.error.set(null);
     try {
-      const answers: AnswerSelection[] = Object.entries(this.selections()).map(([questionId, answerOptionId]) => ({ questionId, answerOptionId }));
+      const answers: AnswerSelection[] = Object.entries(this.selections())
+        .filter(([, answerOptionIds]) => answerOptionIds.length > 0)
+        .map(([questionId, answerOptionIds]) => ({ questionId, answerOptionIds }));
       this.evaluation.set(await this.api.submitAnswers(this.id, answers));
       this.toast.success(this.i18n.t('toast.submitted'));
     } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to submit.'); }

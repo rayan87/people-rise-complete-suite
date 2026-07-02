@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Api } from '../../core/api';
 import { Session } from '../../core/session';
 import { I18n } from '../../core/i18n';
+import { ToastService } from '../../core/toast';
+import { ConfirmService } from '../../core/confirm';
 import { Methodology } from '../../core/models';
 
 @Component({
@@ -21,6 +23,7 @@ import { Methodology } from '../../core/models';
     .mcard-name { font-weight: 500; color: var(--text); font-size: 1rem; }
     .mcard-meta { font-size: .88rem; color: var(--text-faint); margin-top: 2px; }
     .mcard-arrow { color: var(--text-faint); font-size: 18px; }
+    .mcard-del { margin-inline-start: auto; }
     .version-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
     .ver-chip {
       font-size: .8rem; padding: 1px 8px; border-radius: 999px;
@@ -87,6 +90,11 @@ import { Methodology } from '../../core/models';
               }
             </div>
             <i class="ti ti-chevron-right mcard-arrow"></i>
+            @if (canDelete(m)) {
+              <button class="sm danger icon mcard-del" (click)="onDelete(m, $event)" [disabled]="saving()" title="Delete methodology">
+                <i class="ti ti-trash"></i>
+              </button>
+            }
           </a>
         }
       }
@@ -95,6 +103,8 @@ import { Methodology } from '../../core/models';
 })
 export class MethodologyList {
   private api = inject(Api);
+  private toast = inject(ToastService);
+  private cs = inject(ConfirmService);
   readonly session = inject(Session);
   readonly i18n = inject(I18n);
   readonly methodologies = signal<Methodology[]>([]);
@@ -112,6 +122,28 @@ export class MethodologyList {
     try { this.methodologies.set(await this.api.methodologies()); }
     catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load methodologies.'); }
     finally { this.loading.set(false); }
+  }
+
+  canDelete(m: Methodology): boolean {
+    return !m.versions.some(v => v.status === 'Active' || v.status === 'Retired');
+  }
+
+  async onDelete(m: Methodology, e: Event) {
+    e.preventDefault(); e.stopPropagation();
+    const ok = await this.cs.confirm({
+      title: `Delete "${this.i18n.name(m.nameEn, m.nameAr)}"?`,
+      body: 'This will permanently remove the methodology and all its draft versions.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    this.saving.set(true);
+    try {
+      await this.api.deleteMethodology(m.id);
+      this.toast.success('Methodology deleted.');
+      await this.load();
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to delete methodology.'); }
+    finally { this.saving.set(false); }
   }
 
   async create() {

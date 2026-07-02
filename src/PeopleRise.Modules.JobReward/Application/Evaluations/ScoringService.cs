@@ -24,7 +24,8 @@ internal sealed class ScoringService(JobRewardDbContext db)
         return new MethodologyStructure(
             factors, questions,
             options.ToDictionary(o => o.Id, o => o),
-            questions.ToDictionary(q => q.Id, q => q.FactorId));
+            questions.ToDictionary(q => q.Id, q => q.FactorId),
+            questions.ToDictionary(q => q.Id, q => q));
     }
 
     public async Task<Guid?> ResolveGradeIdAsync(Guid versionId, int total, CancellationToken ct)
@@ -51,21 +52,30 @@ internal sealed class ScoringService(JobRewardDbContext db)
             return Error.Validation(
                 $"{missing.Count} question(s) not answered; every question must be answered. First: {missing[0]}.");
 
-        var validQuestionIds = s.Questions.Select(q => q.Id).ToHashSet();
         var factorTotals = s.Factors.ToDictionary(f => f.Id, _ => 0);
         var scoredAnswers = new List<AnswerScore>(answers.Count);
 
         foreach (var a in answers)
         {
-            if (!validQuestionIds.Contains(a.QuestionId))
+            if (!s.QuestionsById.TryGetValue(a.QuestionId, out var question))
                 return Error.Validation($"Question {a.QuestionId} does not belong to this methodology version.");
-            if (!s.OptionsById.TryGetValue(a.AnswerOptionId, out var option))
-                return Error.Validation($"Answer option {a.AnswerOptionId} not found.");
-            if (option.QuestionId != a.QuestionId)
-                return Error.Validation($"Answer option {a.AnswerOptionId} does not belong to question {a.QuestionId}.");
+            if (a.AnswerOptionIds.Count == 0)
+                return Error.Validation($"Question {a.QuestionId} has no selected answer.");
+            if (question.QuestionType == QuestionType.SingleChoice && a.AnswerOptionIds.Count > 1)
+                return Error.Validation($"Question {a.QuestionId} allows only one selected answer.");
+            if (a.AnswerOptionIds.Distinct().Count() != a.AnswerOptionIds.Count)
+                return Error.Validation($"Question {a.QuestionId} has the same answer selected more than once.");
 
-            scoredAnswers.Add(new AnswerScore(a.QuestionId, a.AnswerOptionId, option.Points));
-            factorTotals[s.FactorByQuestion[a.QuestionId]] += option.Points;   // weight = 1.0 first cut
+            foreach (var optionId in a.AnswerOptionIds)
+            {
+                if (!s.OptionsById.TryGetValue(optionId, out var option))
+                    return Error.Validation($"Answer option {optionId} not found.");
+                if (option.QuestionId != a.QuestionId)
+                    return Error.Validation($"Answer option {optionId} does not belong to question {a.QuestionId}.");
+
+                scoredAnswers.Add(new AnswerScore(a.QuestionId, optionId, option.Points));
+                factorTotals[s.FactorByQuestion[a.QuestionId]] += option.Points;   // weight = 1.0 first cut
+            }
         }
 
         var factorScores = s.Factors.Select(f => (f.Id, factorTotals[f.Id])).ToList();
@@ -78,7 +88,8 @@ internal sealed record MethodologyStructure(
     IReadOnlyList<Factor> Factors,
     IReadOnlyList<Question> Questions,
     IReadOnlyDictionary<Guid, AnswerOption> OptionsById,
-    IReadOnlyDictionary<Guid, Guid> FactorByQuestion);
+    IReadOnlyDictionary<Guid, Guid> FactorByQuestion,
+    IReadOnlyDictionary<Guid, Question> QuestionsById);
 
 internal readonly record struct AnswerScore(Guid QuestionId, Guid AnswerOptionId, int Points);
 

@@ -19,8 +19,10 @@ export interface Job {
 export interface MethodologyVersion { id: string; versionNo: number; status: string; note: string | null; publishedAt: string | null; }
 export interface Methodology { id: string; code: string; nameEn: string; nameAr: string | null; versions: MethodologyVersion[]; }
 
+export type QuestionType = 'SingleChoice' | 'MultipleChoice';
+
 export interface AnswerOption { id: string; labelEn: string; labelAr: string | null; points: number; sortOrder: number; }
-export interface QuestionDetail { id: string; questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; sortOrder: number; options: AnswerOption[]; }
+export interface QuestionDetail { id: string; questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; sortOrder: number; options: AnswerOption[]; }
 export interface FactorDetail { id: string; code: string; nameEn: string; nameAr: string | null; weight: number; sortOrder: number; questions: QuestionDetail[]; }
 export interface GradeMapping { id: string; gradeId: string; gradeCode: string | null; minScore: number; maxScore: number; }
 export interface MethodologyVersionDetail {
@@ -42,7 +44,7 @@ export interface EvaluationListItem {
   methodologyVersionId: string; status: string; totalScore: number | null;
   recommendedGradeId: string | null; recommendedGradeCode: string | null; createdAt: string;
 }
-export interface AnswerSelection { questionId: string; answerOptionId: string; }
+export interface AnswerSelection { questionId: string; answerOptionIds: string[]; }
 
 export interface SalaryBandInfo { id: string; currency: string; minAmount: number; midpoint: number; maxAmount: number; spreadPct: number; overlapPct: number; effectiveDate: string; status: string; }
 export interface SalaryBandRow { gradeId: string; gradeCode: string; gradeNameEn: string; gradeNameAr: string | null; rank: number; levelCode: string | null; band: SalaryBandInfo | null; }

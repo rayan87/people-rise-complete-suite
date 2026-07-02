@@ -57,7 +57,7 @@ internal class JobRewardDbContext(DbContextOptions<JobRewardDbContext> options) 
         b.Entity<Employee>().HasIndex(x => x.EmployeeNo).IsUnique();
         b.Entity<MethodologyVersion>().HasIndex(x => new { x.MethodologyId, x.VersionNo }).IsUnique();
         b.Entity<GradeMapping>().HasIndex(x => new { x.MethodologyVersionId, x.GradeId }).IsUnique();
-        b.Entity<EvaluationAnswer>().HasIndex(x => new { x.EvaluationId, x.QuestionId }).IsUnique();
+        b.Entity<EvaluationAnswer>().HasIndex(x => new { x.EvaluationId, x.QuestionId, x.AnswerOptionId }).IsUnique();
 
         // at most one OPEN assignment per position (partial unique index)
         b.Entity<EmployeeAssignment>().HasIndex(x => x.PositionId)

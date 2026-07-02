@@ -8,6 +8,8 @@ internal class Methodology : Entity
     public string NameEn { get; private set; } = "";
     public string? NameAr { get; private set; }
 
+    public ICollection<MethodologyVersion>? Versions { get; set; }
+
     private Methodology() { }   // EF
 
     public static Methodology Create(string code, string nameEn, string? nameAr) =>
@@ -77,20 +79,21 @@ internal class Question : Entity
     public string? QuestionTextAr { get; private set; }
     public string? HelpTextEn { get; private set; }
     public string? HelpTextAr { get; private set; }
+    public QuestionType QuestionType { get; private set; } = QuestionType.SingleChoice;
     public int SortOrder { get; private set; }
 
     private Question() { }   // EF
 
     public static Question Create(Guid factorId, string questionTextEn, string? questionTextAr,
-                                  string? helpTextEn, string? helpTextAr, int sortOrder) =>
+                                  string? helpTextEn, string? helpTextAr, QuestionType questionType, int sortOrder) =>
         new()
         {
             FactorId = factorId, QuestionTextEn = questionTextEn, QuestionTextAr = questionTextAr,
-            HelpTextEn = helpTextEn, HelpTextAr = helpTextAr, SortOrder = sortOrder,
+            HelpTextEn = helpTextEn, HelpTextAr = helpTextAr, QuestionType = questionType, SortOrder = sortOrder,
         };
 
-    public void Update(string questionTextEn, string? questionTextAr, string? helpTextEn, string? helpTextAr, int sortOrder)
-    { QuestionTextEn = questionTextEn; QuestionTextAr = questionTextAr; HelpTextEn = helpTextEn; HelpTextAr = helpTextAr; SortOrder = sortOrder; }
+    public void Update(string questionTextEn, string? questionTextAr, string? helpTextEn, string? helpTextAr, QuestionType questionType, int sortOrder)
+    { QuestionTextEn = questionTextEn; QuestionTextAr = questionTextAr; HelpTextEn = helpTextEn; HelpTextAr = helpTextAr; QuestionType = questionType; SortOrder = sortOrder; }
 }
 
 internal class AnswerOption : Entity   // simple rule: answer = points

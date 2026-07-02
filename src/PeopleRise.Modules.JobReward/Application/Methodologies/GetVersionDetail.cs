@@ -21,7 +21,7 @@ internal sealed class GetVersionDetailHandler(JobRewardDbContext db)
                 f.Id, f.Code, f.NameEn, f.NameAr, f.Weight, f.SortOrder,
                 db.Questions.Where(q => q.FactorId == f.Id).OrderBy(q => q.SortOrder)
                     .Select(q => new QuestionDetailDto(
-                        q.Id, q.QuestionTextEn, q.QuestionTextAr, q.HelpTextEn, q.HelpTextAr, q.SortOrder,
+                        q.Id, q.QuestionTextEn, q.QuestionTextAr, q.HelpTextEn, q.HelpTextAr, q.QuestionType.ToString(), q.SortOrder,
                         db.AnswerOptions.Where(o => o.QuestionId == q.Id).OrderBy(o => o.SortOrder)
                             .Select(o => new AnswerOptionDto(o.Id, o.LabelEn, o.LabelAr, o.Points, o.SortOrder)).ToList()))
                     .ToList())).ToListAsync(ct);

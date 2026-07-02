@@ -97,7 +97,7 @@ internal static class ElDeltaDemoSeeder
         foreach (var d in factorDefs)
         {
             var factor = Factor.Create(version.Id, d.Code, d.NameEn, d.NameAr, 1m, sort++);
-            var question = Question.Create(factor.Id, d.QEn, d.QAr, null, null, 1);
+            var question = Question.Create(factor.Id, d.QEn, d.QAr, null, null, QuestionType.SingleChoice, 1);
             var options = d.Options
                 .Select((o, i) => AnswerOption.Create(question.Id, o.En, o.Ar, pointScale[i], i + 1))
                 .ToArray();

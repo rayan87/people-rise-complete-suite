@@ -1,6 +1,6 @@
 namespace PeopleRise.Modules.JobReward.Application.Evaluations;
 
-public record AnswerSelection(Guid QuestionId, Guid AnswerOptionId);
+public record AnswerSelection(Guid QuestionId, IReadOnlyList<Guid> AnswerOptionIds);
 
 /// <summary>Request body for submitting answers (the evaluation id comes from the route).</summary>
 public record SubmitAnswersRequest(IReadOnlyList<AnswerSelection> Answers);

@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE } from './config';
 import {
   Level, Grade, JobFamily, Job, Methodology, MethodologyVersion,
-  MethodologyVersionDetail, EvaluationResult, EvaluationListItem, AnswerSelection, SalaryBandRow,
+  MethodologyVersionDetail, EvaluationResult, EvaluationListItem, AnswerSelection, SalaryBandRow, QuestionType,
 } from './models';
 
 /** Thin typed wrapper over the People Rise API. Headers are added by the session interceptor. */
@@ -40,13 +40,15 @@ export class Api {
   methodologies() { return this.get<Methodology[]>('/methodologies'); }
   createMethodology(b: { code: string; nameEn: string; nameAr: string | null }) { return this.post<Methodology>('/methodologies', b); }
   updateMethodology(id: string, b: { nameEn: string; nameAr: string | null }) { return this.put<Methodology>(`/methodologies/${id}`, b); }
+  deleteMethodology(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodologies/${id}`)); }
   createVersion(mid: string, b: { note: string | null }) { return this.post<MethodologyVersion>(`/methodologies/${mid}/versions`, b); }
   version(id: string) { return this.get<MethodologyVersionDetail>(`/methodology-versions/${id}`); }
   publishVersion(id: string) { return this.post<MethodologyVersion>(`/methodology-versions/${id}/publish`, {}); }
+  deleteVersion(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodology-versions/${id}`)); }
   addFactor(vid: string, b: { code: string; nameEn: string; nameAr: string | null; sortOrder: number; weight: number | null }) { return this.post<unknown>(`/methodology-versions/${vid}/factors`, b); }
   updateFactor(vid: string, fid: string, b: { code: string; nameEn: string; nameAr: string | null; sortOrder: number; weight: number | null }) { return this.put<unknown>(`/methodology-versions/${vid}/factors/${fid}`, b); }
-  addQuestion(fid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; sortOrder: number }) { return this.post<unknown>(`/factors/${fid}/questions`, b); }
-  updateQuestion(fid: string, qid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; sortOrder: number }) { return this.put<unknown>(`/factors/${fid}/questions/${qid}`, b); }
+  addQuestion(fid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; sortOrder: number }) { return this.post<unknown>(`/factors/${fid}/questions`, b); }
+  updateQuestion(fid: string, qid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; sortOrder: number }) { return this.put<unknown>(`/factors/${fid}/questions/${qid}`, b); }
   addOption(qid: string, b: { labelEn: string; labelAr: string | null; points: number; sortOrder: number }) { return this.post<unknown>(`/questions/${qid}/options`, b); }
   updateOption(qid: string, oid: string, b: { labelEn: string; labelAr: string | null; points: number; sortOrder: number }) { return this.put<unknown>(`/questions/${qid}/options/${oid}`, b); }
   deleteFactor(vid: string, fid: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodology-versions/${vid}/factors/${fid}`)); }
