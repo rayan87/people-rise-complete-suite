@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -17,5 +19,14 @@ internal sealed class CreateMethodologyHandler(JobRewardDbContext db)
         db.Methodologies.Add(m);
         await db.SaveChangesAsync(ct);
         return new MethodologyDto(m.Id, m.Code, m.NameEn, m.NameAr, []);
+    }
+}
+
+internal static class CreateMethodologyEndpoint
+{
+    public static void MapCreateMethodologyEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapPost("/", async (CreateMethodologyCommand cmd, CreateMethodologyHandler h, CancellationToken ct) =>
+           (await h.Handle(cmd, ct)).ToHttp());
     }
 }

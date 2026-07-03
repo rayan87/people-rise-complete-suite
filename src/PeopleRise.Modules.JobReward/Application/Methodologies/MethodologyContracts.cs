@@ -23,8 +23,4 @@ public record GradeMappingDto(Guid Id, Guid GradeId, string? GradeCode, int MinS
 // Request bodies (the route id is supplied separately by the endpoint). En required, Ar optional.
 public record UpdateMethodologyRequest(string NameEn, string? NameAr);
 public record CreateMethodologyVersionRequest(string? Note = null);
-public record FactorRequest(string Code, string NameEn, string? NameAr, int SortOrder, decimal? Weight = null);
-public record QuestionRequest(string QuestionTextEn, string? QuestionTextAr, string? HelpTextEn, string? HelpTextAr, string QuestionType, int SortOrder);
-public record AnswerOptionRequest(string LabelEn, string? LabelAr, int Points, int SortOrder);
-public record CreateGradeMappingRequest(Guid GradeId, int MinScore, int MaxScore);
-public record UpdateGradeMappingRequest(Guid GradeId, int MinScore, int MaxScore);
+

@@ -96,14 +96,12 @@ internal static class ElDeltaDemoSeeder
         var sort = 1;
         foreach (var d in factorDefs)
         {
-            var factor = Factor.Create(version.Id, d.Code, d.NameEn, d.NameAr, 1m, sort++);
-            var question = Question.Create(factor.Id, d.QEn, d.QAr, null, null, QuestionType.SingleChoice, 1);
+            var factor = version.AddFactor(d.Code, d.NameEn, d.NameAr, 1m, sort++);
+            var question = factor.AddQuestion(d.QEn, d.QAr, null, null, QuestionType.SingleChoice, 1);
             var options = d.Options
-                .Select((o, i) => AnswerOption.Create(question.Id, o.En, o.Ar, pointScale[i], i + 1))
+                .Select((o, i) => question.AddAnswerOption(o.En, o.Ar, pointScale[i], i + 1))
                 .ToArray();
-            db.Factors.Add(factor);
-            db.Questions.Add(question);
-            db.AnswerOptions.AddRange(options);
+
             factorBuilds.Add((factor, question, options));
         }
 
@@ -113,15 +111,16 @@ internal static class ElDeltaDemoSeeder
             ("G1", 20, 27), ("G2", 28, 34), ("G3", 35, 41), ("G4", 42, 48), ("G5", 49, 55),
             ("G6", 56, 62), ("G7", 63, 69), ("G8", 70, 76), ("G9", 77, 83), ("G10", 84, 91), ("G11", 92, 100),
         };
+
         foreach (var m in mapDefs)
-            db.GradeMappings.Add(GradeMapping.Create(version.Id, grades[m.Grade].Id, m.Min, m.Max));
+            version.AddGradeMapping(grades[m.Grade].Id, m.Min, m.Max);
 
         Guid? ResolveGrade(int total) => mapDefs
             .Where(m => m.Min <= total && total <= m.Max)
             .Select(m => (Guid?)grades[m.Grade].Id)
             .FirstOrDefault();
 
-        version.Publish(hasQuestions: true, hasGradeMappings: true);
+        version.Publish();
 
         // ---- Jobs (bilingual titles) ----
         var jobDefs = new (string Code, string En, string Ar, string Level, string Family)[]

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
@@ -21,17 +23,28 @@ internal sealed class DeleteMethodologyHandler(JobRewardDbContext db)
             return Error.NotFound("Methodology not found.");
         }
 
-        var hasPublished = methodology.Versions!.Any(v =>
-            v.Status == MethodologyVersionStatus.Active ||
-             v.Status == MethodologyVersionStatus.Retired);
-
-        if (hasPublished)
+        try 
         {
-            return Error.Conflict("Methodology has published versions and cannot be deleted.");
+            methodology.EnsureDeletable();
+        } 
+        catch (DomainStateException e) 
+        { 
+            return Error.Conflict(e.Message); 
         }
             
         db.Methodologies.Remove(methodology);
         await db.SaveChangesAsync(ct);
+
         return Result<bool>.Success(true);
+    }
+}
+
+internal static class DeleteMethodologyEndpoint
+{
+    public static void MapDeleteMethodologyEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapDelete("/{id:guid}",
+            async (Guid id, DeleteMethodologyHandler h, CancellationToken ct) =>
+                (await h.Handle(new DeleteMethodologyCommand(id), ct)).ToHttp());
     }
 }
