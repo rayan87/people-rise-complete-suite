@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
@@ -17,5 +19,14 @@ internal sealed class UpdateGradeHandler(JobRewardDbContext db)
         grade.Update(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank, cmd.LevelId);
         await db.SaveChangesAsync(ct);
         return new GradeDto(grade.Id, grade.Code, grade.NameEn, grade.NameAr, grade.Rank, grade.LevelId, null);
+    }
+}
+
+internal static class UpdateGradeEndpoint
+{
+    public static void MapUpdateGradeEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapPut("/{id:guid}", async (Guid id, UpdateGradeCommand cmd, UpdateGradeHandler h, CancellationToken ct) =>
+            (await h.Handle(cmd with { Id = id }, ct)).ToHttp());
     }
 }

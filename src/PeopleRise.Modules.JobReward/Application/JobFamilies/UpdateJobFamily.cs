@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
@@ -10,12 +12,29 @@ internal sealed class UpdateJobFamilyHandler(JobRewardDbContext db)
 {
     public async Task<Result<JobFamilyDto>> Handle(UpdateJobFamilyCommand cmd, CancellationToken ct)
     {
-        var family = await db.JobFamilies.FindAsync([cmd.Id], ct);
-        if (family is null) return Error.NotFound("Job family not found.");
-        if (string.IsNullOrWhiteSpace(cmd.NameEn)) return Error.Validation("English name is required.");
+        var family = await db.JobFamilies.FindAsync(cmd.Id, ct);
+
+        if (family is null)
+        {
+            return Error.NotFound("Job family not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(cmd.NameEn))
+        {
+            return Error.Validation("English name is required.");
+        }
 
         family.Update(cmd.Code, cmd.NameEn, cmd.NameAr);
         await db.SaveChangesAsync(ct);
         return new JobFamilyDto(family.Id, family.Code, family.NameEn, family.NameAr);
+    }
+}
+
+internal static class UpdateJobFamilyEndpoint
+{
+    public static void MapUpdateJobFamilyEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapPut("/{id:guid}", async (Guid id, UpdateJobFamilyCommand cmd, UpdateJobFamilyHandler h, CancellationToken ct) =>
+            (await h.Handle(cmd with { Id = id }, ct)).ToHttp());
     }
 }

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -15,5 +17,14 @@ internal sealed class ListLevelsHandler(JobRewardDbContext db)
             .Select(l => new LevelDto(l.Id, l.Code, l.NameEn, l.NameAr, l.Rank, l.InEvalScope))
             .ToListAsync(ct);
         return Result<IReadOnlyList<LevelDto>>.Success(rows);
+    }
+}
+
+internal static class ListLevelsEndpoint
+{
+    public static void MapListLevelsEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapGet("/", async (ListLevelsHandler h, CancellationToken ct) =>
+            (await h.Handle(new ListLevelsQuery(), ct)).ToHttp());
     }
 }
