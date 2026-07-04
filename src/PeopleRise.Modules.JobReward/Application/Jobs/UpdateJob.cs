@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -29,5 +31,14 @@ internal sealed class UpdateJobHandler(JobRewardDbContext db)
             job.Id, job.Code, job.TitleEn, job.TitleAr, job.DescriptionEn, job.DescriptionAr,
             job.LevelId, null, null, null, job.JobFamilyId, null, null, null,
             job.GradeId, null, null, null, job.Status.ToString(), null);
+    }
+}
+
+internal static class UpdateJobEndpoint
+{
+    public static void MapUpdateJobEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapPut("/{id:guid}", async (Guid id, UpdateJobCommand cmd, UpdateJobHandler h, CancellationToken ct) =>
+            (await h.Handle(cmd with { Id = id }, ct)).ToHttp());
     }
 }

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
@@ -14,3 +16,13 @@ internal sealed class GetEvaluationHandler(JobRewardDbContext db)
         return result is null ? Error.NotFound("Evaluation not found.") : result;
     }
 }
+
+internal static class GetEvaluationEndpoint
+{
+    public static void MapGetEvaluationEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapGet("/{id:guid}", async (Guid id, GetEvaluationHandler h, CancellationToken ct) =>
+            (await h.Handle(new GetEvaluationQuery(id), ct)).ToHttp());
+    }
+}
+

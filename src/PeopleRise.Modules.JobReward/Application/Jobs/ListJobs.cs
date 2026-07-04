@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -21,5 +23,14 @@ internal sealed class ListJobsHandler(JobRewardDbContext db)
                 .Select(b => new JobBandDto(b.Currency, b.MinAmount, b.Midpoint, b.MaxAmount)).FirstOrDefault()
             )).ToListAsync(ct);
         return Result<IReadOnlyList<JobDto>>.Success(rows);
+    }
+}
+
+internal static class ListJobsEndpoint
+{
+    public static void MapListJobsEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapGet("/", async (ListJobsHandler h, CancellationToken ct) =>
+            (await h.Handle(new ListJobsQuery(), ct)).ToHttp());
     }
 }

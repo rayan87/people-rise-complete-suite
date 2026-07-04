@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -21,5 +23,14 @@ internal sealed class GetJobHandler(JobRewardDbContext db)
                 .Select(b => new JobBandDto(b.Currency, b.MinAmount, b.Midpoint, b.MaxAmount)).FirstOrDefault()
             )).FirstOrDefaultAsync(ct);
         return dto is null ? Error.NotFound("Job not found.") : dto;
+    }
+}
+
+internal static class GetJobEndpoint
+{
+    public static void MapGetJobEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapGet("/{id:guid}", async (Guid id, GetJobHandler h, CancellationToken ct) =>
+            (await h.Handle(new GetJobQuery(id), ct)).ToHttp());
     }
 }

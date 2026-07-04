@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -13,11 +15,30 @@ internal sealed class ListEvaluationsHandler(JobRewardDbContext db)
     {
         var rows = await db.Evaluations
             .OrderByDescending(e => e.CreatedAt)
-            .Select(e => new EvaluationListItemDto(
-                e.Id, e.JobId, e.Job!.Code, e.Job.TitleEn, e.Job.TitleAr,
-                e.MethodologyVersionId, e.Status.ToString(), e.TotalScore,
-                e.RecommendedGradeId, e.RecommendedGrade!.Code, e.CreatedAt))
-            .ToListAsync(ct);
+            .Select(e => new EvaluationListItemDto
+            (
+                e.Id, 
+                e.JobId, 
+                e.Job!.Code, 
+                e.Job.TitleEn, 
+                e.Job.TitleAr,
+                e.MethodologyVersionId, 
+                e.Status.ToString(), 
+                e.TotalScore,
+                e.RecommendedGradeId, 
+                e.RecommendedGrade!.Code, 
+                e.CreatedAt
+            )).ToListAsync(ct);
+
         return Result<IReadOnlyList<EvaluationListItemDto>>.Success(rows);
+    }
+}
+
+internal static class ListEvaluationsEndpoint
+{
+    public static void MapListEvaluationsEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapGet("/", async (ListEvaluationsHandler h, CancellationToken ct) =>
+            (await h.Handle(new ListEvaluationsQuery(), ct)).ToHttp());
     }
 }

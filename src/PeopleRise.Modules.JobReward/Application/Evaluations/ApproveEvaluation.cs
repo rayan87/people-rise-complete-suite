@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
@@ -41,3 +43,13 @@ internal sealed class ApproveEvaluationHandler(JobRewardDbContext db)
         return (await EvaluationProjections.BuildAsync(db, evaluation.Id, ct))!;
     }
 }
+
+internal static class ApproveEvaluationEndpoint
+{
+    public static void MapApproveEvaluationEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapPost("/{id:guid}/approve", async (Guid id, ApproveEvaluationHandler h, CancellationToken ct) =>
+            (await h.Handle(new ApproveEvaluationCommand(id), ct)).ToHttp());
+    }
+}
+
