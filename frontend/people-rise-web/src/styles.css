@@ -141,6 +141,8 @@ button.subtle {
   border-color: var(--border-strong);
 }
 button.subtle:hover { background: var(--surface-2); color: var(--text); }
+button.accent { background: var(--warn); border-color: var(--warn); color: #fff; }
+button.accent:hover { filter: brightness(1.08); }
 button.sm { padding: .35rem .7rem; font-size: .8rem; }
 button.icon {
   padding: 0; width: 2rem; height: 2rem;
@@ -148,6 +150,27 @@ button.icon {
   font-size: 1rem;
 }
 button i { font-size: 0.9rem; }
+
+/* modal shell — reused by the global confirm dialog and any feature-local modal */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 900;
+  display: grid;
+  place-items: center;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  max-width: 440px;
+  width: 90vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+.modal h2 { margin: 0 0 .5rem; font-size: 1.05rem; }
+.modal > p { margin: 0 0 1rem; }
+.modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.25rem; }
 
 /* tables */
 table { width: 100%; border-collapse: collapse; font-size: var(--text-base); }
@@ -168,7 +191,7 @@ tbody tr.clickable:hover td { background: var(--surface-2); }
   border-radius: 999px; font-size: var(--text-xs); font-weight: 500;
 }
 .badge.draft { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
-.badge.active, .badge.approved, .badge.evaluated, .badge.published {
+.badge.active, .badge.approved, .badge.published {
   background: var(--success-soft); color: var(--success);
 }
 .badge.submitted, .badge.in-review {

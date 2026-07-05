@@ -1,6 +1,7 @@
 namespace PeopleRise.Modules.JobReward.Domain;
 
-public enum JobStatus { Draft, Evaluated, Active, Archived }
+public enum JobStatus { Draft, Active, Archived }
+public enum GradeSource { Evaluated, Assigned }
 public enum PositionStatus { ApprovedVacant, Filled, Frozen, Abolished }   // ApprovedVacant = the "open box"
 public enum MethodologyVersionStatus { Draft, Active, Retired }
 public enum QuestionType { SingleChoice, MultipleChoice }

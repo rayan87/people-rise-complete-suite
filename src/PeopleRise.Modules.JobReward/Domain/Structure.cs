@@ -75,8 +75,9 @@ internal class Job : Entity   // a role DEFINITION - the thing you evaluate
     public Level? Level { get; private set; }
     public Guid? JobFamilyId { get; private set; }     // nullable: job works before families exist
     public JobFamily? JobFamily { get; private set; }
-    public Guid? GradeId { get; private set; }          // nullable: set once evaluated
+    public Guid? GradeId { get; private set; }          // nullable: set once graded
     public Grade? Grade { get; private set; }
+    public GradeSource? GradeSource { get; private set; }   // null until graded; moves WITH GradeId
     public JobStatus Status { get; private set; } = JobStatus.Draft;
 
     private Job() { }   // EF
@@ -94,12 +95,18 @@ internal class Job : Entity   // a role DEFINITION - the thing you evaluate
     { Code = code; TitleEn = titleEn; TitleAr = titleAr; LevelId = levelId;
       DescriptionEn = descriptionEn; DescriptionAr = descriptionAr; JobFamilyId = jobFamilyId; }
 
-    /// <summary>An approved evaluation stamps the recommended grade onto the job.</summary>
-    public void AssignGrade(Guid gradeId)
+    /// <summary>The ONLY way a job gets/changes a grade. Both the evaluation flow and the direct-assign
+    /// flow call this. GradeId + GradeSource always move together.</summary>
+    public void AssignGrade(Guid gradeId, GradeSource source)
     {
+        if (Status == JobStatus.Archived)
+            throw new DomainStateException("Cannot grade an archived job.");
         GradeId = gradeId;
-        Status = JobStatus.Evaluated;
+        GradeSource = source;
+        Status = JobStatus.Active;   // Draft -> Active on first grading; Active -> Active on re-grade
     }
+
+    public void Archive() => Status = JobStatus.Archived;   // grade preserved for history; do NOT clear it
 }
 
 internal class JobPosition : Entity   // a SEAT - the establishment counts these

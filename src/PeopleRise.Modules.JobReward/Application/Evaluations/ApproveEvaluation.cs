@@ -32,12 +32,18 @@ internal sealed class ApproveEvaluationHandler(JobRewardDbContext db)
         }
 
         // Pipeline outcome: an approved evaluation stamps the recommended grade onto the job.
-        if (evaluation.RecommendedGradeId is { } gradeId 
+        if (evaluation.RecommendedGradeId is { } gradeId
             && evaluation.Job is { } job)
         {
-            job.AssignGrade(gradeId);
+            // immutable rule: never edit a prior evaluation; supersede it (kept for history)
+            var priorApproved = await db.Evaluations
+                .Where(e => e.JobId == job.Id && e.Status == EvaluationStatus.Approved && e.Id != evaluation.Id)
+                .ToListAsync(ct);
+            foreach (var p in priorApproved) p.Supersede();
+
+            job.AssignGrade(gradeId, GradeSource.Evaluated);
         }
-        
+
         await db.SaveChangesAsync(ct);
 
         return (await EvaluationProjections.BuildAsync(db, evaluation.Id, ct))!;

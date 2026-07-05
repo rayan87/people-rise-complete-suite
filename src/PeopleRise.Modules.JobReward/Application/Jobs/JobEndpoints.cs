@@ -15,5 +15,6 @@ internal static class JobEndpoints
         group.MapCreateJobEndpoint();
         group.MapUpdateJobEndpoint();
         group.MapDeleteJobEndpoint();
+        group.MapAssignJobGradeEndpoint();
     }
 }

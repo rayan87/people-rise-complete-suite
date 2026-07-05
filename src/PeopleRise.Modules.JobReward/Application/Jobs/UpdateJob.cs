@@ -30,7 +30,7 @@ internal sealed class UpdateJobHandler(JobRewardDbContext db)
         return new JobDto(
             job.Id, job.Code, job.TitleEn, job.TitleAr, job.DescriptionEn, job.DescriptionAr,
             job.LevelId, null, null, null, job.JobFamilyId, null, null, null,
-            job.GradeId, null, null, null, job.Status.ToString(), null);
+            job.GradeId, null, null, null, job.Status.ToString(), job.GradeSource?.ToString(), null);
     }
 }
 

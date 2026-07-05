@@ -13,7 +13,7 @@ export interface Job {
   levelId: string; levelCode: string | null; levelNameEn: string | null; levelNameAr: string | null;
   jobFamilyId: string | null; jobFamilyCode: string | null; jobFamilyNameEn: string | null; jobFamilyNameAr: string | null;
   gradeId: string | null; gradeCode: string | null; gradeNameEn: string | null; gradeNameAr: string | null;
-  status: string; band: JobBand | null;
+  status: string; gradeSource: string | null; band: JobBand | null;
 }
 
 export interface MethodologyVersion { id: string; versionNo: number; status: string; note: string | null; publishedAt: string | null; }

@@ -205,7 +205,7 @@ internal static class ElDeltaDemoSeeder
             if (e.Approve)
             {
                 eval.Approve();
-                if (gradeId is { } g) job.AssignGrade(g);
+                if (gradeId is { } g) job.AssignGrade(g, GradeSource.Evaluated);
             }
             db.Evaluations.Add(eval);
             evalCount++;

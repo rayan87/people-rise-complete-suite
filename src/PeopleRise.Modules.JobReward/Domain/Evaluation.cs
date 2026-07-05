@@ -42,6 +42,14 @@ internal class Evaluation : Entity
         Status = EvaluationStatus.Approved;
         ApprovedAt = DateTime.UtcNow;
     }
+
+    /// <summary>A later evaluation for the same job was approved. Kept for history; answers untouched.</summary>
+    public void Supersede()
+    {
+        if (Status != EvaluationStatus.Approved)
+            throw new DomainStateException($"Evaluation is {Status}; only an Approved evaluation can be superseded.");
+        Status = EvaluationStatus.Superseded;
+    }
 }
 
 internal class EvaluationAnswer : ImmutableEntity   // the audit trail - insert-only

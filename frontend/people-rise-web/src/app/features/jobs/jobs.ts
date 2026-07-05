@@ -89,7 +89,6 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
           <select [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)">
             <option value="">All</option>
             <option value="Draft">Draft</option>
-            <option value="Evaluated">Evaluated</option>
             <option value="Active">Active</option>
             <option value="Archived">Archived</option>
           </select>

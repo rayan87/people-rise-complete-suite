@@ -21,6 +21,9 @@ import { Job, Level, JobFamily } from '../../core/models';
     .job-card:hover { border-color: var(--primary); }
     .job-card-title { font-size: .88rem; font-weight: 500; color: var(--text); line-height: 1.3; }
     .grade-chip { display: inline-block; margin-top: 3px; font-size: .68rem; font-weight: 600; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; letter-spacing: .01em; }
+    .provenance-dot { font-size: .55rem; margin-inline-start: 3px; }
+    .provenance-dot.evaluated { color: var(--success); }
+    .provenance-dot.assigned { color: var(--primary); }
     .cell-empty { display: block; text-align: center; padding: 1.25rem 0; color: var(--border); font-size: .9rem; }
   `],
   template: `
@@ -70,7 +73,13 @@ import { Job, Level, JobFamily } from '../../core/models';
                       @for (j of jobsAt(l.id, f.id); track j.id) {
                         <a [routerLink]="['/jobs', j.id]" class="job-card">
                           <div class="job-card-title">{{ i18n.name(j.titleEn, j.titleAr) }}</div>
-                          @if (j.gradeCode) { <span class="grade-chip">{{ j.gradeCode }}</span> }
+                          @if (j.gradeCode) {
+                            <span class="grade-chip">
+                              {{ j.gradeCode }}
+                              @if (j.gradeSource === 'Assigned') { <span class="provenance-dot assigned" [title]="i18n.t('job.provenance.assigned')">●</span> }
+                              @else if (j.gradeSource === 'Evaluated') { <span class="provenance-dot evaluated" [title]="i18n.t('job.provenance.evaluated')">●</span> }
+                            </span>
+                          }
                         </a>
                       }
                       @if (!jobsAt(l.id, f.id).length) { <span class="cell-empty">—</span> }
@@ -81,7 +90,13 @@ import { Job, Level, JobFamily } from '../../core/models';
                       @for (j of jobsAt(l.id, null); track j.id) {
                         <a [routerLink]="['/jobs', j.id]" class="job-card">
                           <div class="job-card-title">{{ i18n.name(j.titleEn, j.titleAr) }}</div>
-                          @if (j.gradeCode) { <span class="grade-chip">{{ j.gradeCode }}</span> }
+                          @if (j.gradeCode) {
+                            <span class="grade-chip">
+                              {{ j.gradeCode }}
+                              @if (j.gradeSource === 'Assigned') { <span class="provenance-dot assigned" [title]="i18n.t('job.provenance.assigned')">●</span> }
+                              @else if (j.gradeSource === 'Evaluated') { <span class="provenance-dot evaluated" [title]="i18n.t('job.provenance.evaluated')">●</span> }
+                            </span>
+                          }
                         </a>
                       }
                       @if (!jobsAt(l.id, null).length) { <span class="cell-empty">—</span> }

@@ -19,6 +19,7 @@ internal sealed class GetJobHandler(JobRewardDbContext db)
             j.JobFamilyId, j.JobFamily!.Code, j.JobFamily.NameEn, j.JobFamily.NameAr,
             j.GradeId, j.Grade!.Code, j.Grade.NameEn, j.Grade.NameAr,
             j.Status.ToString(),
+            j.GradeSource == null ? null : j.GradeSource.ToString(),
             db.SalaryBands.Where(b => b.GradeId == j.GradeId && b.JobFamilyId == null)
                 .Select(b => new JobBandDto(b.Currency, b.MinAmount, b.Midpoint, b.MaxAmount)).FirstOrDefault()
             )).FirstOrDefaultAsync(ct);

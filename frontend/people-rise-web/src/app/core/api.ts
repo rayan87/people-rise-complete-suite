@@ -35,6 +35,7 @@ export class Api {
   createJob(b: { code: string; titleEn: string; titleAr: string | null; levelId: string; descriptionEn: string | null; descriptionAr: string | null; jobFamilyId: string | null }) { return this.post<Job>('/jobs', b); }
   updateJob(id: string, b: { code: string; titleEn: string; titleAr: string | null; levelId: string; descriptionEn: string | null; descriptionAr: string | null; jobFamilyId: string | null }) { return this.put<Job>(`/jobs/${id}`, b); }
   deleteJob(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/jobs/${id}`)); }
+  assignGrade(id: string, gradeId: string) { return this.post<Job>(`/jobs/${id}/grade`, { gradeId }); }
 
   // methodology authoring
   methodologies() { return this.get<Methodology[]>('/methodologies'); }

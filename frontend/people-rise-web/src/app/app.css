@@ -275,25 +275,7 @@
   to   { opacity: 1; transform: none; }
 }
 
-/* ── Confirm / modal ── */
-.modal-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
-  z-index: 900;
-  display: grid;
-  place-items: center;
-}
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  max-width: 440px;
-  width: 90vw;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18);
-}
-.modal h2 { margin: 0 0 .5rem; font-size: 1.05rem; }
-.modal > p { margin: 0 0 1rem; }
-.modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.25rem; }
+/* ── Confirm dialog ── */
+/* .modal / .modal-backdrop shell lives in the global stylesheet so any feature can open a modal. */
 button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 button.danger:hover { filter: brightness(1.1); }
