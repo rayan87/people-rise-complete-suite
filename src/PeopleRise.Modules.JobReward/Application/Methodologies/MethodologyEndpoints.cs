@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using PeopleRise.Modules.JobReward.Application.Methodologies.AnswerOptions;
 using PeopleRise.Modules.JobReward.Application.Methodologies.Factors;
 using PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
+using PeopleRise.Modules.JobReward.Application.Methodologies.ImportExport;
 using PeopleRise.Modules.JobReward.Application.Methodologies.Questions;
 using PeopleRise.Modules.JobReward.Application.Methodologies.Versions;
 
@@ -19,6 +20,7 @@ internal static class MethodologyEndpoints
         methodologiesGroup.MapUpdateMethodologyEndpoint();
         methodologiesGroup.MapDeleteMethodologyEndpoint();
         methodologiesGroup.MapCreateVersionEndpoint();
+        methodologiesGroup.MapImportMethodologyVersionEndpoint();
 
         var versions = app.MapGroup("/methodology-versions");
 
@@ -26,6 +28,7 @@ internal static class MethodologyEndpoints
         versions.MapGetVersionDetailEndpoint();
         versions.MapPublishVersionEndpoint();
         versions.MapDeleteVersionEndpoint();
+        versions.MapExportMethodologyVersionEndpoint();
 
         //Factors
         versions.MapAddFactorEndpoint();
