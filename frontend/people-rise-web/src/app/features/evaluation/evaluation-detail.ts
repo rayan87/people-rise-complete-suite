@@ -29,22 +29,38 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
             @for (f of ver.factors; track f.id) {
               <div class="factor">
                 <h3>{{ i18n.name(f.nameEn, f.nameAr) }}</h3>
+                @if (f.helpTextEn || f.helpTextAr) {
+                  <div class="help-text">{{ i18n.name(f.helpTextEn, f.helpTextAr) }}</div>
+                }
                 @for (q of f.questions; track q.id) {
                   <div class="question">
                     <div class="q-text">{{ i18n.name(q.questionTextEn, q.questionTextAr) }}</div>
+                    @if (q.helpTextEn || q.helpTextAr) {
+                      <div class="help-text">{{ i18n.name(q.helpTextEn, q.helpTextAr) }}</div>
+                    }
                     <div class="opts">
                       @if (q.questionType === 'MultipleChoice') {
                         @for (o of q.options; track o.id) {
                           <label class="opt">
                             <input type="checkbox" [checked]="isSelected(q.id, o.id)" (change)="toggle(q.id, o.id)" />
-                            <span>{{ i18n.name(o.labelEn, o.labelAr) }}</span>
+                            <span>
+                              {{ i18n.name(o.labelEn, o.labelAr) }}
+                              @if (o.helpTextEn || o.helpTextAr) {
+                                <div class="help-text">{{ i18n.name(o.helpTextEn, o.helpTextAr) }}</div>
+                              }
+                            </span>
                           </label>
                         }
                       } @else {
                         @for (o of q.options; track o.id) {
                           <label class="opt">
                             <input type="radio" [name]="q.id" [checked]="isSelected(q.id, o.id)" (change)="select(q.id, o.id)" />
-                            <span>{{ i18n.name(o.labelEn, o.labelAr) }}</span>
+                            <span>
+                              {{ i18n.name(o.labelEn, o.labelAr) }}
+                              @if (o.helpTextEn || o.helpTextAr) {
+                                <div class="help-text">{{ i18n.name(o.helpTextEn, o.helpTextAr) }}</div>
+                              }
+                            </span>
                           </label>
                         }
                       }
@@ -76,8 +92,8 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
         <div class="card">
           <h2>{{ i18n.t('eval.audit') }}</h2>
           <table>
-            <thead><tr><th>{{ i18n.t('eval.questionnaire') }}</th><th>{{ i18n.t('eval.labelEn') }}</th><th>{{ i18n.t('field.points') }}</th></tr></thead>
-            <tbody>@for (a of ev.answers; track a.questionId) { <tr><td>{{ i18n.name(a.questionTextEn, a.questionTextAr) }}</td><td>{{ i18n.name(a.answerLabelEn, a.answerLabelAr) }}</td><td>{{ a.pointsSnapshot }}</td></tr> }</tbody>
+            <thead><tr><th>{{ i18n.t('eval.questionnaire') }}</th><th>{{ i18n.t('eval.labelEn') }}</th><th>{{ i18n.t('eval.rating') }}</th></tr></thead>
+            <tbody>@for (a of ev.answers; track a.questionId) { <tr><td>{{ i18n.name(a.questionTextEn, a.questionTextAr) }}</td><td>{{ i18n.name(a.answerLabelEn, a.answerLabelAr) }}</td><td>{{ a.ratingSnapshot }}</td></tr> }</tbody>
           </table>
         </div>
       }
@@ -87,9 +103,10 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
     .factor { margin-bottom:1.25rem; }
     .question { background:var(--surface-2); border-radius:8px; padding:.7rem .9rem; margin:.5rem 0; }
     .q-text { font-weight:600; }
+    .help-text { font-size:.82rem; color:var(--text-faint); font-weight:400; line-height:1.4; margin-top:2px; }
     .opts { display:flex; flex-direction:column; gap:.35rem; margin-top:.4rem; }
-    .opt { display:flex; align-items:center; gap:.5rem; font-weight:400; color:var(--text); cursor:pointer; }
-    .opt input { width:auto; }
+    .opt { display:flex; align-items:flex-start; gap:.5rem; font-weight:400; color:var(--text); cursor:pointer; }
+    .opt input { width:auto; margin-top:3px; }
     .submit-bar { display:flex; align-items:center; gap:1rem; margin-top:1rem; }
     .submit-bar button { margin-inline-start:auto; }
     .sc { text-align:center; }

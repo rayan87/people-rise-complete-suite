@@ -26,6 +26,7 @@ internal static class MethodologyEndpoints
 
         //Versions
         versions.MapGetVersionDetailEndpoint();
+        versions.MapSetPointBudgetEndpoint();
         versions.MapPublishVersionEndpoint();
         versions.MapDeleteVersionEndpoint();
         versions.MapExportMethodologyVersionEndpoint();
@@ -39,6 +40,8 @@ internal static class MethodologyEndpoints
         versions.MapAddGradeMappingEndpoint();
         versions.MapUpdateGradeMappingEndpoint();
         versions.MapDeleteGradeMappingEndpoint();
+        versions.MapSetGradeRangeEndpoint();
+        versions.MapAutoAssignGradeRangesEndpoint();
 
         //Questions
         app.MapAddQuestionEndpoint();

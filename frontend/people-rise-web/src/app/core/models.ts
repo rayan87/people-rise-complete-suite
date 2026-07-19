@@ -16,23 +16,25 @@ export interface Job {
   status: string; gradeSource: string | null; band: JobBand | null;
 }
 
-export interface MethodologyVersion { id: string; versionNo: number; status: string; note: string | null; publishedAt: string | null; }
+export interface MethodologyVersion { id: string; versionNo: number; status: string; note: string | null; minPoints: number; maxPoints: number; publishedAt: string | null; }
 export interface Methodology { id: string; code: string; nameEn: string; nameAr: string | null; versions: MethodologyVersion[]; }
 
 export type QuestionType = 'SingleChoice' | 'MultipleChoice';
 
-export interface AnswerOption { id: string; labelEn: string; labelAr: string | null; points: number; sortOrder: number; }
-export interface QuestionDetail { id: string; questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; sortOrder: number; options: AnswerOption[]; }
-export interface FactorDetail { id: string; code: string; nameEn: string; nameAr: string | null; weight: number; sortOrder: number; questions: QuestionDetail[]; }
-export interface GradeMapping { id: string; gradeId: string; gradeCode: string | null; minScore: number; maxScore: number; }
+// rating: the unified 1-5 answer scale (editable). calculatedPoints: server-computed points this
+// option scores (rounded) - never recompute this client-side, see version-editor.ts.
+export interface AnswerOption { id: string; labelEn: string; labelAr: string | null; helpTextEn: string | null; helpTextAr: string | null; rating: number; sortOrder: number; calculatedPoints: number; }
+export interface QuestionDetail { id: string; questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; weight: number; isRequired: boolean; sortOrder: number; calculatedPoints: number; options: AnswerOption[]; }
+export interface FactorDetail { id: string; code: string; nameEn: string; nameAr: string | null; helpTextEn: string | null; helpTextAr: string | null; weight: number; sortOrder: number; calculatedPoints: number; questions: QuestionDetail[]; }
+export interface GradeMapping { id: string; gradeId: string; gradeCode: string | null; minScore: number | null; maxScore: number | null; }
 export interface MethodologyVersionDetail {
   id: string; methodologyId: string; methodologyCode: string; methodologyNameEn: string; methodologyNameAr: string | null;
-  versionNo: number; status: string; note: string | null; publishedAt: string | null;
+  versionNo: number; status: string; note: string | null; minPoints: number; maxPoints: number; publishedAt: string | null;
   factors: FactorDetail[]; gradeMappings: GradeMapping[];
 }
 
 export interface FactorScore { factorId: string; factorCode: string; factorNameEn: string; factorNameAr: string | null; score: number; }
-export interface AnswerAudit { questionId: string; questionTextEn: string; questionTextAr: string | null; answerOptionId: string; answerLabelEn: string; answerLabelAr: string | null; pointsSnapshot: number; }
+export interface AnswerAudit { questionId: string; questionTextEn: string; questionTextAr: string | null; answerOptionId: string; answerLabelEn: string; answerLabelAr: string | null; ratingSnapshot: number; }
 export interface EvaluationResult {
   id: string; jobId: string; jobCode: string; jobTitleEn: string; jobTitleAr: string | null;
   methodologyVersionId: string; status: string; totalScore: number | null;

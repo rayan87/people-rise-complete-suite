@@ -45,7 +45,7 @@ internal sealed class SubmitAnswersHandler(JobRewardDbContext db, ScoringService
         var gradeId = await scoring.ResolveGradeIdAsync(evaluation.MethodologyVersionId, score.Total, ct);
 
         foreach (var a in score.Answers)
-            db.EvaluationAnswers.Add(EvaluationAnswer.Create(evaluation.Id, a.QuestionId, a.AnswerOptionId, a.Points));
+            db.EvaluationAnswers.Add(EvaluationAnswer.Create(evaluation.Id, a.QuestionId, a.AnswerOptionId, a.Rating));
         foreach (var fs in score.FactorScores)
             db.EvaluationFactorScores.Add(EvaluationFactorScore.Create(evaluation.Id, fs.FactorId, fs.Score));
 

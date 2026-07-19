@@ -60,15 +60,15 @@ internal class EvaluationAnswer : ImmutableEntity   // the audit trail - insert-
     public Question? Question { get; private set; }
     public Guid AnswerOptionId { get; private set; }
     public AnswerOption? AnswerOption { get; private set; }
-    public int PointsSnapshot { get; private set; }   // points frozen at answering time
+    public int RatingSnapshot { get; private set; }   // the chosen answer's rating (1-5), frozen at answering time
 
     private EvaluationAnswer() { }   // EF
 
-    public static EvaluationAnswer Create(Guid evaluationId, Guid questionId, Guid answerOptionId, int pointsSnapshot) =>
+    public static EvaluationAnswer Create(Guid evaluationId, Guid questionId, Guid answerOptionId, int ratingSnapshot) =>
         new()
         {
             EvaluationId = evaluationId, QuestionId = questionId,
-            AnswerOptionId = answerOptionId, PointsSnapshot = pointsSnapshot,
+            AnswerOptionId = answerOptionId, RatingSnapshot = ratingSnapshot,
         };
 }
 

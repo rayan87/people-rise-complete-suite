@@ -4,13 +4,14 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Methodologies.ImportExport;
 
-// Reads/writes the 4-sheet methodology workbook (Factors, Questions, AnswerOptions, GradeMappings).
+// Reads/writes the 5-sheet methodology workbook (Version, Factors, Questions, AnswerOptions, GradeMappings).
 // Sheets are joined by workbook-local row keys (Key/FactorKey/QuestionKey), since Question has no
 // natural code. Grades themselves aren't part of the file - GradeCode must already exist in the tenant.
 internal static class MethodologyWorkbook
 {
     public const string ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
+    private const string VersionSheet = "Version";
     private const string FactorsSheet = "Factors";
     private const string QuestionsSheet = "Questions";
     private const string AnswerOptionsSheet = "AnswerOptions";
@@ -20,14 +21,19 @@ internal static class MethodologyWorkbook
     {
         using var workbook = new XLWorkbook();
 
+        var versionInfo = workbook.Worksheets.Add(VersionSheet);
+        WriteHeader(versionInfo, "MinPoints", "MaxPoints");
+        versionInfo.Cell(2, 1).Value = version.MinPoints;
+        versionInfo.Cell(2, 2).Value = version.MaxPoints;
+
         var factors = workbook.Worksheets.Add(FactorsSheet);
         WriteHeader(factors, "Key", "Code", "NameEn", "NameAr", "Weight", "SortOrder");
 
         var questions = workbook.Worksheets.Add(QuestionsSheet);
-        WriteHeader(questions, "Key", "FactorKey", "QuestionTextEn", "QuestionTextAr", "HelpTextEn", "HelpTextAr", "QuestionType", "SortOrder");
+        WriteHeader(questions, "Key", "FactorKey", "QuestionTextEn", "QuestionTextAr", "HelpTextEn", "HelpTextAr", "QuestionType", "Weight", "IsRequired", "SortOrder");
 
         var answerOptions = workbook.Worksheets.Add(AnswerOptionsSheet);
-        WriteHeader(answerOptions, "QuestionKey", "LabelEn", "LabelAr", "Points", "SortOrder");
+        WriteHeader(answerOptions, "QuestionKey", "LabelEn", "LabelAr", "Rating", "SortOrder");
 
         var gradeMappings = workbook.Worksheets.Add(GradeMappingsSheet);
         WriteHeader(gradeMappings, "GradeCode", "MinScore", "MaxScore");
@@ -61,7 +67,9 @@ internal static class MethodologyWorkbook
                 questions.Cell(questionRow, 5).Value = question.HelpTextEn;
                 questions.Cell(questionRow, 6).Value = question.HelpTextAr;
                 questions.Cell(questionRow, 7).Value = question.QuestionType;
-                questions.Cell(questionRow, 8).Value = question.SortOrder;
+                questions.Cell(questionRow, 8).Value = question.Weight;
+                questions.Cell(questionRow, 9).Value = question.IsRequired;
+                questions.Cell(questionRow, 10).Value = question.SortOrder;
                 questionRow++;
 
                 foreach (var option in question.Options)
@@ -69,7 +77,7 @@ internal static class MethodologyWorkbook
                     answerOptions.Cell(optionRow, 1).Value = questionKey;
                     answerOptions.Cell(optionRow, 2).Value = option.LabelEn;
                     answerOptions.Cell(optionRow, 3).Value = option.LabelAr;
-                    answerOptions.Cell(optionRow, 4).Value = option.Points;
+                    answerOptions.Cell(optionRow, 4).Value = option.Rating;
                     answerOptions.Cell(optionRow, 5).Value = option.SortOrder;
                     optionRow++;
                 }
@@ -102,6 +110,7 @@ internal static class MethodologyWorkbook
         using var stream = new MemoryStream(content);
         using var workbook = new XLWorkbook(stream);
 
+        var versionInfo = ReadVersionInfo(workbook, errors);
         var factors = ReadFactors(workbook, errors);
         var questions = ReadQuestions(workbook, errors);
         var answerOptions = ReadAnswerOptions(workbook, errors);
@@ -134,7 +143,7 @@ internal static class MethodologyWorkbook
             return Error.Validation(string.Join(" | ", errors));
         }
 
-        return new ParsedMethodologyWorkbook(factors, questions, answerOptions, gradeMappings);
+        return new ParsedMethodologyWorkbook(versionInfo, factors, questions, answerOptions, gradeMappings);
     }
 
     private static void WriteHeader(IXLWorksheet sheet, params string[] headers)
@@ -159,6 +168,27 @@ internal static class MethodologyWorkbook
     }
 
     private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static ParsedVersionInfoRow ReadVersionInfo(XLWorkbook workbook, List<string> errors)
+    {
+        var sheet = RequireSheet(workbook, VersionSheet, errors);
+        if (sheet is null) return new ParsedVersionInfoRow(200, 1000);
+
+        var row = sheet.RowsUsed().Skip(1).FirstOrDefault();
+        if (row is null)
+        {
+            errors.Add($"{VersionSheet}: a MinPoints/MaxPoints row is required.");
+            return new ParsedVersionInfoRow(200, 1000);
+        }
+
+        if (!row.Cell(1).TryGetValue(out int minPoints) || !row.Cell(2).TryGetValue(out int maxPoints))
+        {
+            errors.Add($"{VersionSheet}: MinPoints and MaxPoints must be whole numbers.");
+            return new ParsedVersionInfoRow(200, 1000);
+        }
+
+        return new ParsedVersionInfoRow(minPoints, maxPoints);
+    }
 
     private static List<ParsedFactorRow> ReadFactors(XLWorkbook workbook, List<string> errors)
     {
@@ -186,7 +216,13 @@ internal static class MethodologyWorkbook
             }
 
             var nameAr = NullIfBlank(row.Cell(4).GetString());
-            var weight = row.Cell(5).IsEmpty() ? 1m : row.Cell(5).GetValue<decimal>();
+
+            if (!row.Cell(5).TryGetValue(out decimal weight))
+            {
+                errors.Add($"{FactorsSheet} row {rowNo}: Weight must be a number.");
+                continue;
+            }
+
             var sortOrder = row.Cell(6).IsEmpty() ? 0 : row.Cell(6).GetValue<int>();
 
             rows.Add(new ParsedFactorRow(key, code, nameEn, nameAr, weight, sortOrder));
@@ -227,6 +263,14 @@ internal static class MethodologyWorkbook
 
             var questionType = row.Cell(7).GetString().Trim();
 
+            if (!row.Cell(8).TryGetValue(out decimal weight))
+            {
+                errors.Add($"{QuestionsSheet} row {rowNo}: Weight must be a number.");
+                continue;
+            }
+
+            var isRequired = row.Cell(9).IsEmpty() || row.Cell(9).GetValue<bool>();
+
             rows.Add(new ParsedQuestionRow(
                 key,
                 factorKey,
@@ -235,7 +279,9 @@ internal static class MethodologyWorkbook
                 NullIfBlank(row.Cell(5).GetString()),
                 NullIfBlank(row.Cell(6).GetString()),
                 questionType,
-                row.Cell(8).IsEmpty() ? 0 : row.Cell(8).GetValue<int>()));
+                weight,
+                isRequired,
+                row.Cell(10).IsEmpty() ? 0 : row.Cell(10).GetValue<int>()));
         }
 
         return rows;
@@ -265,9 +311,9 @@ internal static class MethodologyWorkbook
                 continue;
             }
 
-            if (!row.Cell(4).TryGetValue(out int points))
+            if (!row.Cell(4).TryGetValue(out int rating))
             {
-                errors.Add($"{AnswerOptionsSheet} row {rowNo}: Points must be a whole number.");
+                errors.Add($"{AnswerOptionsSheet} row {rowNo}: Rating must be a whole number.");
                 continue;
             }
 
@@ -275,7 +321,7 @@ internal static class MethodologyWorkbook
                 questionKey,
                 labelEn,
                 NullIfBlank(row.Cell(3).GetString()),
-                points,
+                rating,
                 row.Cell(5).IsEmpty() ? 0 : row.Cell(5).GetValue<int>()));
         }
 
@@ -299,13 +345,30 @@ internal static class MethodologyWorkbook
                 continue;
             }
 
-            if (!row.Cell(2).TryGetValue(out int minScore) || !row.Cell(3).TryGetValue(out int maxScore))
+            int? minScore = null;
+            int? maxScore = null;
+
+            if (!row.Cell(2).IsEmpty())
             {
-                errors.Add($"{GradeMappingsSheet} row {rowNo}: MinScore and MaxScore must be whole numbers.");
-                continue;
+                if (!row.Cell(2).TryGetValue(out int min))
+                {
+                    errors.Add($"{GradeMappingsSheet} row {rowNo}: MinScore must be a whole number.");
+                    continue;
+                }
+                minScore = min;
             }
 
-            if (maxScore < minScore)
+            if (!row.Cell(3).IsEmpty())
+            {
+                if (!row.Cell(3).TryGetValue(out int max))
+                {
+                    errors.Add($"{GradeMappingsSheet} row {rowNo}: MaxScore must be a whole number.");
+                    continue;
+                }
+                maxScore = max;
+            }
+
+            if (minScore is not null && maxScore is not null && maxScore < minScore)
             {
                 errors.Add($"{GradeMappingsSheet} row {rowNo}: MaxScore must be >= MinScore.");
                 continue;

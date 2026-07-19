@@ -49,7 +49,17 @@ internal sealed class ImportMethodologyVersionHandler(JobRewardDbContext db, Get
             .Where(v => v.MethodologyId == cmd.MethodologyId)
             .Select(v => (int?)v.VersionNo).MaxAsync(ct) ?? 0;
 
-        var version = MethodologyVersion.CreateDraft(cmd.MethodologyId, nextVersionNo + 1, cmd.Note);
+        MethodologyVersion version;
+
+        try
+        {
+            version = MethodologyVersion.CreateDraft(cmd.MethodologyId, nextVersionNo + 1, cmd.Note, workbook.VersionInfo.MinPoints, workbook.VersionInfo.MaxPoints);
+        }
+        catch (DomainException e)
+        {
+            return Error.Validation(e.Message);
+        }
+
         db.MethodologyVersions.Add(version);
 
         var factorsByKey = new Dictionary<int, Factor>();
@@ -59,7 +69,7 @@ internal sealed class ImportMethodologyVersionHandler(JobRewardDbContext db, Get
         {
             foreach (var row in workbook.Factors)
             {
-                factorsByKey[row.Key] = version.AddFactor(row.Code, row.NameEn, row.NameAr, row.Weight, row.SortOrder);
+                factorsByKey[row.Key] = version.AddFactor(row.Code, row.NameEn, row.NameAr, null, null, row.Weight, row.SortOrder);
             }
 
             foreach (var row in workbook.Questions)
@@ -70,13 +80,13 @@ internal sealed class ImportMethodologyVersionHandler(JobRewardDbContext db, Get
                 }
 
                 var factor = factorsByKey[row.FactorKey];
-                questionsByKey[row.Key] = factor.AddQuestion(row.QuestionTextEn, row.QuestionTextAr, row.HelpTextEn, row.HelpTextAr, questionType, row.SortOrder);
+                questionsByKey[row.Key] = factor.AddQuestion(row.QuestionTextEn, row.QuestionTextAr, row.HelpTextEn, row.HelpTextAr, questionType, row.Weight, row.IsRequired, row.SortOrder);
             }
 
             foreach (var row in workbook.AnswerOptions)
             {
                 var question = questionsByKey[row.QuestionKey];
-                question.AddAnswerOption(row.LabelEn, row.LabelAr, row.Points, row.SortOrder);
+                question.AddAnswerOption(row.LabelEn, row.LabelAr, null, null, row.Rating, row.SortOrder);
             }
 
             foreach (var row in workbook.GradeMappings)

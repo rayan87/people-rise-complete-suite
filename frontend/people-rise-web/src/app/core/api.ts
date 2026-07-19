@@ -42,22 +42,28 @@ export class Api {
   createMethodology(b: { code: string; nameEn: string; nameAr: string | null }) { return this.post<Methodology>('/methodologies', b); }
   updateMethodology(id: string, b: { nameEn: string; nameAr: string | null }) { return this.put<Methodology>(`/methodologies/${id}`, b); }
   deleteMethodology(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodologies/${id}`)); }
-  createVersion(mid: string, b: { note: string | null }) { return this.post<MethodologyVersion>(`/methodologies/${mid}/versions`, b); }
+  createVersion(mid: string, b: { note: string | null; minPoints?: number; maxPoints?: number }) { return this.post<MethodologyVersion>(`/methodologies/${mid}/versions`, b); }
   version(id: string) { return this.get<MethodologyVersionDetail>(`/methodology-versions/${id}`); }
   publishVersion(id: string) { return this.post<MethodologyVersion>(`/methodology-versions/${id}/publish`, {}); }
   deleteVersion(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodology-versions/${id}`)); }
-  addFactor(vid: string, b: { code: string; nameEn: string; nameAr: string | null; sortOrder: number; weight: number | null }) { return this.post<unknown>(`/methodology-versions/${vid}/factors`, b); }
-  updateFactor(vid: string, fid: string, b: { code: string; nameEn: string; nameAr: string | null; sortOrder: number; weight: number | null }) { return this.put<unknown>(`/methodology-versions/${vid}/factors/${fid}`, b); }
-  addQuestion(fid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; sortOrder: number }) { return this.post<unknown>(`/factors/${fid}/questions`, b); }
-  updateQuestion(fid: string, qid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; sortOrder: number }) { return this.put<unknown>(`/factors/${fid}/questions/${qid}`, b); }
-  addOption(qid: string, b: { labelEn: string; labelAr: string | null; points: number; sortOrder: number }) { return this.post<unknown>(`/questions/${qid}/options`, b); }
-  updateOption(qid: string, oid: string, b: { labelEn: string; labelAr: string | null; points: number; sortOrder: number }) { return this.put<unknown>(`/questions/${qid}/options/${oid}`, b); }
+  setPointBudget(vid: string, b: { minPoints: number; maxPoints: number }) { return this.put<MethodologyVersion>(`/methodology-versions/${vid}/point-budget`, b); }
+  addFactor(vid: string, b: { code: string; nameEn: string; nameAr: string | null; helpTextEn: string | null; helpTextAr: string | null; sortOrder: number; weight: number }) { return this.post<unknown>(`/methodology-versions/${vid}/factors`, b); }
+  updateFactor(vid: string, fid: string, b: { code: string; nameEn: string; nameAr: string | null; helpTextEn: string | null; helpTextAr: string | null; sortOrder: number; weight: number }) { return this.put<unknown>(`/methodology-versions/${vid}/factors/${fid}`, b); }
+  addQuestion(fid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; weight: number; isRequired: boolean; sortOrder: number }) { return this.post<unknown>(`/factors/${fid}/questions`, b); }
+  updateQuestion(fid: string, qid: string, b: { questionTextEn: string; questionTextAr: string | null; helpTextEn: string | null; helpTextAr: string | null; questionType: QuestionType; weight: number; isRequired: boolean; sortOrder: number }) { return this.put<unknown>(`/factors/${fid}/questions/${qid}`, b); }
+  addOption(qid: string, b: { labelEn: string; labelAr: string | null; helpTextEn: string | null; helpTextAr: string | null; rating: number; sortOrder: number }) { return this.post<unknown>(`/questions/${qid}/options`, b); }
+  updateOption(qid: string, oid: string, b: { labelEn: string; labelAr: string | null; helpTextEn: string | null; helpTextAr: string | null; rating: number; sortOrder: number }) { return this.put<unknown>(`/questions/${qid}/options/${oid}`, b); }
   deleteFactor(vid: string, fid: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodology-versions/${vid}/factors/${fid}`)); }
   deleteQuestion(fid: string, qid: string) { return firstValueFrom(this.http.delete(`${API_BASE}/factors/${fid}/questions/${qid}`)); }
   deleteOption(qid: string, oid: string) { return firstValueFrom(this.http.delete(`${API_BASE}/questions/${qid}/options/${oid}`)); }
-  addGradeMapping(vid: string, b: { gradeId: string; minScore: number; maxScore: number }) { return this.post<unknown>(`/methodology-versions/${vid}/grade-mappings`, b); }
-  updateGradeMapping(vid: string, mid: string, b: { gradeId: string; minScore: number; maxScore: number }) { return this.put<unknown>(`/methodology-versions/${vid}/grade-mappings/${mid}`, b); }
+  addGradeMapping(vid: string, b: { gradeId: string; minScore: number | null; maxScore: number | null }) { return this.post<unknown>(`/methodology-versions/${vid}/grade-mappings`, b); }
+  updateGradeMapping(vid: string, mid: string, b: { gradeId: string; minScore: number | null; maxScore: number | null }) { return this.put<unknown>(`/methodology-versions/${vid}/grade-mappings/${mid}`, b); }
   deleteGradeMapping(vid: string, mid: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodology-versions/${vid}/grade-mappings/${mid}`)); }
+  // two-step grade flow: addGradeMapping (above, with null min/max) assigns a grade with no range yet;
+  // setGradeRange sets that one grade's range by hand; autoAssignGradeRanges tiles the point budget
+  // evenly across every currently-assigned grade (overwriting any existing ranges).
+  setGradeRange(vid: string, mid: string, b: { minScore: number; maxScore: number }) { return this.post<unknown>(`/methodology-versions/${vid}/grade-mappings/${mid}/range`, b); }
+  autoAssignGradeRanges(vid: string) { return this.post<unknown>(`/methodology-versions/${vid}/grade-mappings/auto-range`, {}); }
 
   // evaluations
   evaluations() { return this.get<EvaluationListItem[]>('/evaluations'); }

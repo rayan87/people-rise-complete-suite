@@ -1,4 +1,4 @@
-﻿using PeopleRise.SharedKernel;
+using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Domain;
 
@@ -14,7 +14,13 @@ internal class Factor : Entity
 
     public string? NameAr { get; private set; }
 
-    public decimal Weight { get; private set; } = 1m;
+    public string? HelpTextEn { get; private set; }
+
+    public string? HelpTextAr { get; private set; }
+
+    /// <summary>Percentage weight of this factor within the version's point budget. Weights of all
+    /// factors in a version must sum to 100 (enforced at Publish).</summary>
+    public decimal Weight { get; private set; }
 
     public int SortOrder { get; private set; }
 
@@ -26,9 +32,13 @@ internal class Factor : Entity
         string code,
         string nameEn,
         string? nameAr,
+        string? helpTextEn,
+        string? helpTextAr,
         decimal weight,
         int sortOrder)
     {
+        EnsureValidWeight(weight);
+
         return new()
         {
             MethodologyVersionId = version.Id,
@@ -36,22 +46,38 @@ internal class Factor : Entity
             Code = code,
             NameEn = nameEn,
             NameAr = nameAr,
+            HelpTextEn = helpTextEn,
+            HelpTextAr = helpTextAr,
             Weight = weight,
             SortOrder = sortOrder
         };
     }
 
-    public void Update(string code, 
-        string nameEn, 
-        string? nameAr, 
-        decimal weight, 
+    public void Update(string code,
+        string nameEn,
+        string? nameAr,
+        string? helpTextEn,
+        string? helpTextAr,
+        decimal weight,
         int sortOrder)
-    { 
-        Code = code; 
-        NameEn = nameEn; 
+    {
+        EnsureValidWeight(weight);
+
+        Code = code;
+        NameEn = nameEn;
         NameAr = nameAr;
-        Weight = weight; 
-        SortOrder = sortOrder; 
+        HelpTextEn = helpTextEn;
+        HelpTextAr = helpTextAr;
+        Weight = weight;
+        SortOrder = sortOrder;
+    }
+
+    private static void EnsureValidWeight(decimal weight)
+    {
+        if (weight < 0 || weight > 100)
+        {
+            throw new DomainException("Factor weight must be between 0 and 100.");
+        }
     }
 
     public Question AddQuestion(string questionTextEn,
@@ -59,6 +85,8 @@ internal class Factor : Entity
         string? helpTextEn,
         string? helpTextAr,
         QuestionType questionType,
+        decimal weight,
+        bool isRequired,
         int sortOrder)
     {
         if (this.MethodologyVersion is null)
@@ -79,6 +107,8 @@ internal class Factor : Entity
             helpTextEn,
             helpTextAr,
             questionType,
+            weight,
+            isRequired,
             sortOrder);
 
         Questions.Add(question);
@@ -92,6 +122,8 @@ internal class Factor : Entity
         string? helpTextEn,
         string? helpTextAr,
         QuestionType questionType,
+        decimal weight,
+        bool isRequired,
         int sortOrder)
     {
         if (this.MethodologyVersion is null)
@@ -113,11 +145,13 @@ internal class Factor : Entity
             return null;
         }
 
-        question.Update(questionTextEn, 
-            questionTextAr, 
-            helpTextEn, 
-            helpTextAr, 
-            questionType, 
+        question.Update(questionTextEn,
+            questionTextAr,
+            helpTextEn,
+            helpTextAr,
+            questionType,
+            weight,
+            isRequired,
             sortOrder);
 
         return question;

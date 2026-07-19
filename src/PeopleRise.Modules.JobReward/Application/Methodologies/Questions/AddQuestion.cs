@@ -8,7 +8,7 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Methodologies.Questions;
 
-public sealed record AddQuestionCommand(Guid FactorId, string QuestionTextEn, string? QuestionTextAr, string? HelpTextEn, string? HelpTextAr, string QuestionType, int SortOrder);
+public sealed record AddQuestionCommand(Guid FactorId, string QuestionTextEn, string? QuestionTextAr, string? HelpTextEn, string? HelpTextAr, string QuestionType, decimal Weight, bool IsRequired, int SortOrder);
 
 internal sealed class AddQuestionHandler(JobRewardDbContext db)
     : ICommandHandler<AddQuestionCommand, Result<QuestionDto>>
@@ -37,18 +37,20 @@ internal sealed class AddQuestionHandler(JobRewardDbContext db)
 
         Question question;
 
-        try 
-        { 
-            question = factor.AddQuestion(cmd.QuestionTextEn, 
-                cmd.QuestionTextAr, 
-                cmd.HelpTextEn, 
-                cmd.HelpTextAr, 
-                questionType, 
+        try
+        {
+            question = factor.AddQuestion(cmd.QuestionTextEn,
+                cmd.QuestionTextAr,
+                cmd.HelpTextEn,
+                cmd.HelpTextAr,
+                questionType,
+                cmd.Weight,
+                cmd.IsRequired,
                 cmd.SortOrder);
-        } 
-        catch (DomainStateException e) 
-        { 
-            return Error.Conflict(e.Message); 
+        }
+        catch (DomainStateException e)
+        {
+            return Error.Conflict(e.Message);
         }
         catch (DomainException e)
         {
@@ -57,13 +59,15 @@ internal sealed class AddQuestionHandler(JobRewardDbContext db)
 
         db.Questions.Add(question);
         await db.SaveChangesAsync(ct);
-        
+
         return new QuestionDto(question.Id,
-            question.QuestionTextEn, 
-            question.QuestionTextAr, 
-            question.HelpTextEn, 
-            question.HelpTextAr, 
-            question.QuestionType.ToString(), 
+            question.QuestionTextEn,
+            question.QuestionTextAr,
+            question.HelpTextEn,
+            question.HelpTextAr,
+            question.QuestionType.ToString(),
+            question.Weight,
+            question.IsRequired,
             question.SortOrder);
     }
 }
@@ -74,7 +78,6 @@ internal static class AddQuestionEndpoint
     {
         app.MapPost("/factors/{factorId:guid}/questions",
             async (Guid factorId, QuestionRequest body, AddQuestionHandler h, CancellationToken ct) =>
-                (await h.Handle(new AddQuestionCommand(factorId, body.QuestionTextEn, body.QuestionTextAr, body.HelpTextEn, body.HelpTextAr, body.QuestionType, body.SortOrder), ct)).ToHttp());
+                (await h.Handle(new AddQuestionCommand(factorId, body.QuestionTextEn, body.QuestionTextAr, body.HelpTextEn, body.HelpTextAr, body.QuestionType, body.Weight, body.IsRequired, body.SortOrder), ct)).ToHttp());
     }
 }
-

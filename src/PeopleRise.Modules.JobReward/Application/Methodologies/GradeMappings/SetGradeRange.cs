@@ -7,13 +7,19 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
 
-public sealed record UpdateGradeMappingCommand(Guid VersionId, Guid MappingId, Guid GradeId, int? MinScore, int? MaxScore);
+// Manual half of the two-step grade flow: set one already-assigned grade's score range by hand.
+public sealed record SetGradeRangeCommand(Guid VersionId, Guid MappingId, int MinScore, int MaxScore);
 
-internal sealed class UpdateGradeMappingHandler(JobRewardDbContext db)
-    : ICommandHandler<UpdateGradeMappingCommand, Result<GradeMappingDto>>
+internal sealed class SetGradeRangeHandler(JobRewardDbContext db)
+    : ICommandHandler<SetGradeRangeCommand, Result<GradeMappingDto>>
 {
-    public async Task<Result<GradeMappingDto>> Handle(UpdateGradeMappingCommand cmd, CancellationToken ct)
+    public async Task<Result<GradeMappingDto>> Handle(SetGradeRangeCommand cmd, CancellationToken ct)
     {
+        if (cmd.MaxScore < cmd.MinScore)
+        {
+            return Error.Validation("maxScore must be >= minScore.");
+        }
+
         var version = await db.MethodologyVersions
             .Include(v => v.GradeMappings)
             .FirstOrDefaultAsync(v => v.Id == cmd.VersionId, ct);
@@ -23,18 +29,11 @@ internal sealed class UpdateGradeMappingHandler(JobRewardDbContext db)
             return Error.NotFound("Methodology version not found.");
         }
 
-        var gradeExists = await db.Grades.AnyAsync(grade => grade.Id == cmd.GradeId);
-
-        if (!gradeExists)
-        {
-            return Error.NotFound("Grade not found.");
-        }
-
         GradeMapping? gradeMapping;
 
         try
         {
-            gradeMapping = version.UpdateGradeMapping(cmd.MappingId, cmd.GradeId, cmd.MinScore, cmd.MaxScore);
+            gradeMapping = version.SetGradeMappingRange(cmd.MappingId, cmd.MinScore, cmd.MaxScore);
 
             if (gradeMapping is null)
             {
@@ -59,12 +58,12 @@ internal sealed class UpdateGradeMappingHandler(JobRewardDbContext db)
     }
 }
 
-internal static class UpdateGradeMappingEndpoint
+internal static class SetGradeRangeEndpoint
 {
-    public static void MapUpdateGradeMappingEndpoint(this RouteGroupBuilder group)
+    public static void MapSetGradeRangeEndpoint(this RouteGroupBuilder group)
     {
-        group.MapPut("/{versionId:guid}/grade-mappings/{mappingId:guid}",
-            async (Guid versionId, Guid mappingId, GradeMappingRequest body, UpdateGradeMappingHandler h, CancellationToken ct) =>
-                (await h.Handle(new UpdateGradeMappingCommand(versionId, mappingId, body.GradeId, body.MinScore, body.MaxScore), ct)).ToHttp());
+        group.MapPost("/{versionId:guid}/grade-mappings/{mappingId:guid}/range",
+            async (Guid versionId, Guid mappingId, SetGradeRangeRequest body, SetGradeRangeHandler h, CancellationToken ct) =>
+                (await h.Handle(new SetGradeRangeCommand(versionId, mappingId, body.MinScore, body.MaxScore), ct)).ToHttp());
     }
 }

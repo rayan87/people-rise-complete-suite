@@ -7,7 +7,7 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Methodologies.Factors;
 
-public sealed record UpdateFactorCommand(Guid VersionId, Guid FactorId, string Code, string NameEn, string? NameAr, int SortOrder, decimal? Weight);
+public sealed record UpdateFactorCommand(Guid VersionId, Guid FactorId, string Code, string NameEn, string? NameAr, string? HelpTextEn, string? HelpTextAr, int SortOrder, decimal Weight);
 
 internal sealed class UpdateFactorHandler(JobRewardDbContext db)
     : ICommandHandler<UpdateFactorCommand, Result<FactorDto>>
@@ -37,7 +37,9 @@ internal sealed class UpdateFactorHandler(JobRewardDbContext db)
                 cmd.Code,
                 cmd.NameEn,
                 cmd.NameAr,
-                cmd.Weight ?? 1m,
+                cmd.HelpTextEn,
+                cmd.HelpTextAr,
+                cmd.Weight,
                 cmd.SortOrder);
 
             if (factor is null)
@@ -55,7 +57,7 @@ internal sealed class UpdateFactorHandler(JobRewardDbContext db)
         }
 
         await db.SaveChangesAsync(ct);
-        return new FactorDto(factor.Id, factor.Code, factor.NameEn, factor.NameAr, factor.Weight, factor.SortOrder);
+        return new FactorDto(factor.Id, factor.Code, factor.NameEn, factor.NameAr, factor.HelpTextEn, factor.HelpTextAr, factor.Weight, factor.SortOrder);
     }
 }
 
@@ -65,6 +67,6 @@ internal static class UpdateFactorEndpoint
     {
         group.MapPut("/{versionId:guid}/factors/{factorId:guid}",
             async (Guid versionId, Guid factorId, FactorRequest body, UpdateFactorHandler h, CancellationToken ct) =>
-                (await h.Handle(new UpdateFactorCommand(versionId, factorId, body.Code, body.NameEn, body.NameAr, body.SortOrder, body.Weight), ct)).ToHttp());
+                (await h.Handle(new UpdateFactorCommand(versionId, factorId, body.Code, body.NameEn, body.NameAr, body.HelpTextEn, body.HelpTextAr, body.SortOrder, body.Weight), ct)).ToHttp());
     }
 }

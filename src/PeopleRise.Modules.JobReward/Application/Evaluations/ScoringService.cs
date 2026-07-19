@@ -6,13 +6,17 @@ using PeopleRise.SharedKernel;
 namespace PeopleRise.Modules.JobReward.Application.Evaluations;
 
 /// <summary>
-/// Server-side point-factor scoring shared by SubmitAnswers and Calibrate (so the rules live once).
-/// First cut: per-factor subtotal = plain sum of selected answer points (factor weight = 1.0).
+/// Server-side weighted point-factor scoring shared by SubmitAnswers and Calibrate (so the rules live once).
+/// Factor points = MethodologyVersion.MaxPoints x Factor.Weight / 100. Question points = Factor points x
+/// Question.Weight / 100. Question score = Question points x (rating / 5), rating being the unified 1-5
+/// answer scale. An unanswered optional question's points are redistributed equally across the other
+/// questions in the same factor.
 /// </summary>
 internal sealed class ScoringService(JobRewardDbContext db)
 {
     public async Task<MethodologyStructure> LoadStructureAsync(Guid versionId, CancellationToken ct)
     {
+        var version = await db.MethodologyVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == versionId, ct);
         var factors = await db.Factors.Where(f => f.MethodologyVersionId == versionId)
             .OrderBy(f => f.SortOrder).ToListAsync(ct);
         var factorIds = factors.Select(f => f.Id).ToList();
@@ -22,16 +26,18 @@ internal sealed class ScoringService(JobRewardDbContext db)
         var options = await db.AnswerOptions.Where(o => questionIds.Contains(o.QuestionId)).ToListAsync(ct);
 
         return new MethodologyStructure(
+            version?.MinPoints ?? 0, version?.MaxPoints ?? 0,
             factors, questions,
             options.ToDictionary(o => o.Id, o => o),
-            questions.ToDictionary(q => q.Id, q => q.FactorId),
             questions.ToDictionary(q => q.Id, q => q));
     }
 
     public async Task<Guid?> ResolveGradeIdAsync(Guid versionId, int total, CancellationToken ct)
     {
         var mapping = await db.GradeMappings
-            .Where(m => m.MethodologyVersionId == versionId && m.MinScore <= total && total <= m.MaxScore)
+            .Where(m => m.MethodologyVersionId == versionId
+                     && m.MinScore != null && m.MaxScore != null
+                     && m.MinScore <= total && total <= m.MaxScore)
             .OrderBy(m => m.MinScore)
             .FirstOrDefaultAsync(ct);
         return mapping?.GradeId;
@@ -49,16 +55,45 @@ internal sealed class ScoringService(JobRewardDbContext db)
             if (!byQuestion.TryAdd(a.QuestionId, a))
                 return Error.Validation($"Question {a.QuestionId} answered more than once.");
 
-        //Make sure all questions have been answered.
-        var missing = structure.Questions.Where(q => !byQuestion.ContainsKey(q.Id)).Select(q => q.Id).ToList();
-        if (missing.Count > 0)
+        //Only required questions must be answered - optional questions may be skipped (their points
+        //are redistributed to the rest of their factor below).
+        var missingRequired = structure.Questions
+            .Where(q => q.IsRequired && !byQuestion.ContainsKey(q.Id))
+            .Select(q => q.Id).ToList();
+        if (missingRequired.Count > 0)
             return Error.Validation(
-                $"{missing.Count} question(s) not answered; every question must be answered. First: {missing[0]}.");
+                $"{missingRequired.Count} required question(s) not answered. First: {missingRequired[0]}.");
+
+        //Weighted points: methodology budget -> factor points -> question points.
+        var questionPoints = new Dictionary<Guid, decimal>();
+        foreach (var factor in structure.Factors)
+        {
+            var factorPoints = structure.MaxPoints * factor.Weight / 100m;
+            foreach (var q in structure.Questions.Where(q => q.FactorId == factor.Id))
+                questionPoints[q.Id] = factorPoints * q.Weight / 100m;
+        }
+
+        //Redistribute unanswered optional questions' points equally across the other questions in
+        //the same factor, so skipping one never shrinks the factor's achievable total.
+        var effectivePoints = new Dictionary<Guid, decimal>(questionPoints);
+        foreach (var factor in structure.Factors)
+        {
+            var factorQuestions = structure.Questions.Where(q => q.FactorId == factor.Id).ToList();
+            foreach (var unanswered in factorQuestions.Where(q => !q.IsRequired && !byQuestion.ContainsKey(q.Id)))
+            {
+                var siblings = factorQuestions.Where(q => q.Id != unanswered.Id).ToList();
+                if (siblings.Count == 0) continue;   // sole question in its factor, skipped - nothing to redistribute to
+
+                var share = questionPoints[unanswered.Id] / siblings.Count;
+                foreach (var sibling in siblings)
+                    effectivePoints[sibling.Id] += share;
+            }
+        }
 
         //Draw factor totals (factor structure empty table)
         var factorTotals = structure.Factors.ToDictionary(f => f.Id, _ => 0);
 
-        //Prepare scored answers array (Answer score is a question with selected answer with collected points)
+        //Prepare scored answers array (Answer score is a question with selected answer with its rating)
         var scoredAnswers = new List<AnswerScore>(answers.Count);
 
         //Loop through submitted answers
@@ -73,8 +108,7 @@ internal sealed class ScoringService(JobRewardDbContext db)
             if (a.AnswerOptionIds.Distinct().Count() != a.AnswerOptionIds.Count)
                 return Error.Validation($"Question {a.QuestionId} has the same answer selected more than once.");
 
-            //Sum selected answer options points into factor
-            //Score each answer (fill answer score and factor totals table)
+            var ratings = new List<int>(a.AnswerOptionIds.Count);
             foreach (var optionId in a.AnswerOptionIds)
             {
                 if (!structure.OptionsById.TryGetValue(optionId, out var option))
@@ -82,9 +116,15 @@ internal sealed class ScoringService(JobRewardDbContext db)
                 if (option.QuestionId != a.QuestionId)
                     return Error.Validation($"Answer option {optionId} does not belong to question {a.QuestionId}.");
 
-                scoredAnswers.Add(new AnswerScore(a.QuestionId, optionId, option.Points));
-                factorTotals[structure.FactorByQuestion[a.QuestionId]] += option.Points;   // weight = 1.0 first cut
+                ratings.Add(option.Rating);
+                scoredAnswers.Add(new AnswerScore(a.QuestionId, optionId, option.Rating));
             }
+
+            // Unified 1-5 rating: single choice uses that rating directly; multiple choice averages
+            // the selected ratings so the question score never exceeds its allocated points.
+            var effectiveRating = (decimal)ratings.Sum() / ratings.Count;
+            var questionScore = effectivePoints[a.QuestionId] * (effectiveRating / 5m);
+            factorTotals[question.FactorId] += (int)Math.Round(questionScore, MidpointRounding.AwayFromZero);
         }
 
         var factorScores = structure.Factors.Select(f => (f.Id, factorTotals[f.Id])).ToList();
@@ -94,13 +134,14 @@ internal sealed class ScoringService(JobRewardDbContext db)
 }
 
 internal sealed record MethodologyStructure(
+    int MinPoints,
+    int MaxPoints,
     IReadOnlyList<Factor> Factors,
     IReadOnlyList<Question> Questions,
     IReadOnlyDictionary<Guid, AnswerOption> OptionsById,
-    IReadOnlyDictionary<Guid, Guid> FactorByQuestion,
     IReadOnlyDictionary<Guid, Question> QuestionsById);
 
-internal readonly record struct AnswerScore(Guid QuestionId, Guid AnswerOptionId, int Points);
+internal readonly record struct AnswerScore(Guid QuestionId, Guid AnswerOptionId, int Rating);
 
 internal readonly record struct ScoreComputation(
     int Total,

@@ -1,3 +1,4 @@
-﻿namespace PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
+namespace PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
 
-public record GradeMappingRequest(Guid GradeId, int MinScore, int MaxScore);
+// MinScore/MaxScore null = assign the grade without a range yet (step one of the two-step flow).
+public record GradeMappingRequest(Guid GradeId, int? MinScore = null, int? MaxScore = null);

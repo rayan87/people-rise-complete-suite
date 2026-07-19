@@ -11,7 +11,7 @@ public record FactorScoreDto(Guid FactorId, string FactorCode, string FactorName
 
 public record AnswerAuditDto(
     Guid QuestionId, string QuestionTextEn, string? QuestionTextAr,
-    Guid AnswerOptionId, string AnswerLabelEn, string? AnswerLabelAr, int PointsSnapshot);
+    Guid AnswerOptionId, string AnswerLabelEn, string? AnswerLabelAr, int RatingSnapshot);
 
 public record EvaluationResultDto(
     Guid Id, Guid JobId, string JobCode, string JobTitleEn, string? JobTitleAr,

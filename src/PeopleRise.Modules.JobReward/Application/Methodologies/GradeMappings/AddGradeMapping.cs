@@ -7,7 +7,7 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
 
-public sealed record AddGradeMappingCommand(Guid VersionId, Guid GradeId, int MinScore, int MaxScore);
+public sealed record AddGradeMappingCommand(Guid VersionId, Guid GradeId, int? MinScore, int? MaxScore);
 
 internal sealed class AddGradeMappingHandler(JobRewardDbContext db)
     : ICommandHandler<AddGradeMappingCommand, Result<GradeMappingDto>>
@@ -22,7 +22,7 @@ internal sealed class AddGradeMappingHandler(JobRewardDbContext db)
             return Error.NotFound("Methodology version not found.");
         }
 
-        if (cmd.MaxScore < cmd.MinScore)
+        if (cmd.MinScore is not null && cmd.MaxScore is not null && cmd.MaxScore < cmd.MinScore)
         {
             return Error.Validation("maxScore must be >= minScore.");
         }
@@ -35,12 +35,12 @@ internal sealed class AddGradeMappingHandler(JobRewardDbContext db)
         GradeMapping? gradeMapping = null;
 
         try
-        { 
-            gradeMapping = version.AddGradeMapping(cmd.GradeId, cmd.MinScore, cmd.MaxScore); 
-        } 
-        catch (DomainStateException e) 
-        { 
-            return Error.Conflict(e.Message); 
+        {
+            gradeMapping = version.AddGradeMapping(cmd.GradeId, cmd.MinScore, cmd.MaxScore);
+        }
+        catch (DomainStateException e)
+        {
+            return Error.Conflict(e.Message);
         }
         catch (DomainException e)
         {
@@ -50,10 +50,10 @@ internal sealed class AddGradeMappingHandler(JobRewardDbContext db)
         db.GradeMappings.Add(gradeMapping);
         await db.SaveChangesAsync(ct);
 
-        return new GradeMappingDto(gradeMapping.Id, 
-            gradeMapping.GradeId, 
-            null, 
-            gradeMapping.MinScore, 
+        return new GradeMappingDto(gradeMapping.Id,
+            gradeMapping.GradeId,
+            null,
+            gradeMapping.MinScore,
             gradeMapping.MaxScore);
     }
 }

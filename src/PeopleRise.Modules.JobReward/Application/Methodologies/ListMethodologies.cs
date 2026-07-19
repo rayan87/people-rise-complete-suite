@@ -30,6 +30,8 @@ internal sealed class ListMethodologiesHandler(JobRewardDbContext db)
                             v.VersionNo,
                             v.Status.ToString(),
                             v.Note,
+                            v.MinPoints,
+                            v.MaxPoints,
                             v.PublishedAt
                         ))
                         .ToList()

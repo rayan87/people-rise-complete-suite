@@ -7,7 +7,7 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Methodologies.AnswerOptions;
 
-public sealed record UpdateOptionCommand(Guid QuestionId, Guid OptionId, string LabelEn, string? LabelAr, int Points, int SortOrder);
+public sealed record UpdateOptionCommand(Guid QuestionId, Guid OptionId, string LabelEn, string? LabelAr, string? HelpTextEn, string? HelpTextAr, int Rating, int SortOrder);
 
 internal sealed class UpdateOptionHandler(JobRewardDbContext db)
     : ICommandHandler<UpdateOptionCommand, Result<AnswerOptionDto>>
@@ -32,18 +32,18 @@ internal sealed class UpdateOptionHandler(JobRewardDbContext db)
 
         AnswerOption? option;
 
-        try 
+        try
         {
-            option = question.UpdateAnswerOption(cmd.OptionId, cmd.LabelEn, cmd.LabelAr, cmd.Points, cmd.SortOrder);
+            option = question.UpdateAnswerOption(cmd.OptionId, cmd.LabelEn, cmd.LabelAr, cmd.HelpTextEn, cmd.HelpTextAr, cmd.Rating, cmd.SortOrder);
 
             if (option is null)
             {
                 return Error.NotFound("Answer option not found.");
             }
-        } 
-        catch (DomainStateException e) 
-        { 
-            return Error.Conflict(e.Message); 
+        }
+        catch (DomainStateException e)
+        {
+            return Error.Conflict(e.Message);
         }
         catch (DomainException e)
         {
@@ -51,11 +51,19 @@ internal sealed class UpdateOptionHandler(JobRewardDbContext db)
         }
 
         await db.SaveChangesAsync(ct);
-        return new AnswerOptionDto(option.Id, 
-            option.LabelEn, 
-            option.LabelAr, 
-            option.Points, 
-            option.SortOrder);
+
+        var factorPoints = question.Factor!.MethodologyVersion!.MaxPoints * question.Factor.Weight / 100m;
+        var questionPoints = factorPoints * question.Weight / 100m;
+        var calculatedPoints = (int)Math.Round(questionPoints * option.Rating / 5m, MidpointRounding.AwayFromZero);
+
+        return new AnswerOptionDto(option.Id,
+            option.LabelEn,
+            option.LabelAr,
+            option.HelpTextEn,
+            option.HelpTextAr,
+            option.Rating,
+            option.SortOrder,
+            calculatedPoints);
     }
 }
 
@@ -65,6 +73,6 @@ internal static class UpdateAnswerOptionEndpoint
     {
         app.MapPut("/questions/{questionId:guid}/options/{optionId:guid}",
             async (Guid questionId, Guid optionId, AnswerOptionRequest body, UpdateOptionHandler h, CancellationToken ct) =>
-                (await h.Handle(new UpdateOptionCommand(questionId, optionId, body.LabelEn, body.LabelAr, body.Points, body.SortOrder), ct)).ToHttp());
+                (await h.Handle(new UpdateOptionCommand(questionId, optionId, body.LabelEn, body.LabelAr, body.HelpTextEn, body.HelpTextAr, body.Rating, body.SortOrder), ct)).ToHttp());
     }
 }

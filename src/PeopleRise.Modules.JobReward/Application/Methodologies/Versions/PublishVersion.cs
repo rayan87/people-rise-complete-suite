@@ -15,7 +15,7 @@ internal sealed class PublishVersionHandler(JobRewardDbContext db)
     public async Task<Result<MethodologyVersionDto>> Handle(PublishVersionCommand cmd, CancellationToken ct)
     {
         var version = await db.MethodologyVersions
-            .Include(methodology => methodology.Factors)
+            .Include(methodology => methodology.Factors!).ThenInclude(factor => factor.Questions)
             .Include(methodology => methodology.GradeMappings)
             .FirstOrDefaultAsync(x => x.Id == cmd.VersionId, ct);
 
@@ -41,10 +41,12 @@ internal sealed class PublishVersionHandler(JobRewardDbContext db)
 
         await db.SaveChangesAsync(ct);
 
-        return new MethodologyVersionDto(version.Id, 
-            version.VersionNo, 
-            version.Status.ToString(), 
-            version.Note, 
+        return new MethodologyVersionDto(version.Id,
+            version.VersionNo,
+            version.Status.ToString(),
+            version.Note,
+            version.MinPoints,
+            version.MaxPoints,
             version.PublishedAt);
     }
 

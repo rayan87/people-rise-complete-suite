@@ -1,8 +1,8 @@
-﻿using PeopleRise.SharedKernel;
+using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Domain;
 
-internal class AnswerOption : Entity   // simple rule: answer = points
+internal class AnswerOption : Entity   // unified rule: every question uses the same 1-5 rating scale
 {
     public Guid QuestionId { get; private set; }
 
@@ -12,34 +12,56 @@ internal class AnswerOption : Entity   // simple rule: answer = points
 
     public string? LabelAr { get; private set; }
 
-    public int Points { get; private set; }
+    public string? HelpTextEn { get; private set; }
+
+    public string? HelpTextAr { get; private set; }
+
+    public int Rating { get; private set; }
 
     public int SortOrder { get; private set; }
 
     private AnswerOption() { }   // EF
 
-    public static AnswerOption Create(Question question, 
-        string labelEn, 
-        string? labelAr, 
-        int points, 
+    public static AnswerOption Create(Question question,
+        string labelEn,
+        string? labelAr,
+        string? helpTextEn,
+        string? helpTextAr,
+        int rating,
         int sortOrder)
     {
-        return new() 
+        EnsureValidRating(rating);
+
+        return new()
         {
-            QuestionId = question.Id, 
+            QuestionId = question.Id,
             Question = question,
-            LabelEn = labelEn, 
-            LabelAr = labelAr, 
-            Points = points, 
-            SortOrder = sortOrder 
+            LabelEn = labelEn,
+            LabelAr = labelAr,
+            HelpTextEn = helpTextEn,
+            HelpTextAr = helpTextAr,
+            Rating = rating,
+            SortOrder = sortOrder
         };
     }
-        
-    public void Update(string labelEn, string? labelAr, int points, int sortOrder)
-    { 
-        LabelEn = labelEn; 
-        LabelAr = labelAr; 
-        Points = points; 
-        SortOrder = sortOrder; 
+
+    public void Update(string labelEn, string? labelAr, string? helpTextEn, string? helpTextAr, int rating, int sortOrder)
+    {
+        EnsureValidRating(rating);
+
+        LabelEn = labelEn;
+        LabelAr = labelAr;
+        HelpTextEn = helpTextEn;
+        HelpTextAr = helpTextAr;
+        Rating = rating;
+        SortOrder = sortOrder;
+    }
+
+    private static void EnsureValidRating(int rating)
+    {
+        if (rating < 1 || rating > 5)
+        {
+            throw new DomainException("Rating must be between 1 and 5.");
+        }
     }
 }

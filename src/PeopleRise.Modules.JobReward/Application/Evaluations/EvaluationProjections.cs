@@ -29,7 +29,7 @@ internal static class EvaluationProjections
             join f in db.Factors on q.FactorId equals f.Id
             where a.EvaluationId == eval.Id
             orderby f.SortOrder, q.SortOrder
-            select new AnswerAuditDto(q.Id, q.QuestionTextEn, q.QuestionTextAr, o.Id, o.LabelEn, o.LabelAr, a.PointsSnapshot)).ToListAsync(ct);
+            select new AnswerAuditDto(q.Id, q.QuestionTextEn, q.QuestionTextAr, o.Id, o.LabelEn, o.LabelAr, a.RatingSnapshot)).ToListAsync(ct);
 
         return new EvaluationResultDto(
             eval.Id, eval.JobId, eval.Job?.Code ?? "", eval.Job?.TitleEn ?? "", eval.Job?.TitleAr,

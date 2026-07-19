@@ -1,3 +1,3 @@
-﻿namespace PeopleRise.Modules.JobReward.Application.Methodologies.AnswerOptions;
+namespace PeopleRise.Modules.JobReward.Application.Methodologies.AnswerOptions;
 
-public record AnswerOptionRequest(string LabelEn, string? LabelAr, int Points, int SortOrder);
+public record AnswerOptionRequest(string LabelEn, string? LabelAr, string? HelpTextEn, string? HelpTextAr, int Rating, int SortOrder);
