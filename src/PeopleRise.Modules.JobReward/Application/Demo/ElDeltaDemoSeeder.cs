@@ -356,9 +356,8 @@ internal static class ElDeltaDemoSeeder
             factorBuilds.Add((factor, questionBuilds));
         }
 
-        // ---- Grade mappings: assign G1..G11 (rank order), then auto-tile the point budget across them.
-        // G12 (exec) is out of evaluation scope. ----
-        var gradeCodesInRankOrder = new[] { "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11" };
+        // ---- Grade mappings: assign G1..G12 (rank order), then auto-tile the point budget across them.
+        var gradeCodesInRankOrder = new[] { "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12" };
         var gradeMappings = gradeCodesInRankOrder.Select(code => version.AssignGrade(grades[code].Id)).ToList();
         version.AutoAssignGradeRanges(gradeMappings.Select(m => m.Id).ToList());
 
