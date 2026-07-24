@@ -22,14 +22,39 @@ internal static class EvaluationProjections
             orderby f.SortOrder
             select new FactorScoreDto(f.Id, f.Code, f.NameEn, f.NameAr, fs.Score)).ToListAsync(ct);
 
-        var answers = await (
+        var maxPoints = await db.MethodologyVersions
+            .Where(v => v.Id == eval.MethodologyVersionId)
+            .Select(v => v.MaxPoints)
+            .FirstAsync(ct);
+
+        // Points can't be computed inside the query itself (Math.Round with MidpointRounding doesn't
+        // reliably translate to SQL) - pull the raw weights/rating out, then compute in plain C#, same
+        // approach as GetVersionDetail's CalculatedPoints.
+        var answerRows = await (
             from a in db.EvaluationAnswers
             join q in db.Questions on a.QuestionId equals q.Id
             join o in db.AnswerOptions on a.AnswerOptionId equals o.Id
             join f in db.Factors on q.FactorId equals f.Id
             where a.EvaluationId == eval.Id
             orderby f.SortOrder, q.SortOrder
-            select new AnswerAuditDto(q.Id, q.QuestionTextEn, q.QuestionTextAr, o.Id, o.LabelEn, o.LabelAr, a.RatingSnapshot)).ToListAsync(ct);
+            select new
+            {
+                QuestionId = q.Id, q.QuestionTextEn, q.QuestionTextAr,
+                AnswerOptionId = o.Id, o.LabelEn, o.LabelAr,
+                a.RatingSnapshot,
+                FactorId = f.Id, f.Code, f.NameEn, f.NameAr, FactorWeight = f.Weight,
+                QuestionWeight = q.Weight,
+            }).ToListAsync(ct);
+
+        var answers = answerRows.Select(r =>
+        {
+            var questionPoints = maxPoints * r.FactorWeight / 100m * r.QuestionWeight / 100m;
+            var points = (int)Math.Round(questionPoints * r.RatingSnapshot / 5m, MidpointRounding.AwayFromZero);
+            return new AnswerAuditDto(
+                r.QuestionId, r.QuestionTextEn, r.QuestionTextAr,
+                r.AnswerOptionId, r.LabelEn, r.LabelAr, r.RatingSnapshot, points,
+                r.FactorId, r.Code, r.NameEn, r.NameAr);
+        }).ToList();
 
         return new EvaluationResultDto(
             eval.Id, eval.JobId, eval.Job?.Code ?? "", eval.Job?.TitleEn ?? "", eval.Job?.TitleAr,

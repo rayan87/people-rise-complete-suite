@@ -91,10 +91,33 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
         </div>
         <div class="card">
           <h2>{{ i18n.t('eval.audit') }}</h2>
-          <table>
-            <thead><tr><th>{{ i18n.t('eval.questionnaire') }}</th><th>{{ i18n.t('eval.labelEn') }}</th><th>{{ i18n.t('eval.rating') }}</th></tr></thead>
-            <tbody>@for (a of ev.answers; track a.questionId) { <tr><td>{{ i18n.name(a.questionTextEn, a.questionTextAr) }}</td><td>{{ i18n.name(a.answerLabelEn, a.answerLabelAr) }}</td><td>{{ a.ratingSnapshot }}</td></tr> }</tbody>
-          </table>
+          @for (fs of ev.factorScores; track fs.factorId) {
+            <div class="audit-factor">
+              <div class="audit-factor-hd">
+                <span>{{ i18n.name(fs.factorNameEn, fs.factorNameAr) }}</span>
+                <span class="pts-badge">{{ fs.score }} {{ i18n.t('eval.pts') }}</span>
+              </div>
+              <table class="audit-table">
+                <colgroup>
+                  <col style="width:40%" />
+                  <col style="width:35%" />
+                  <col style="width:12.5%" />
+                  <col style="width:12.5%" />
+                </colgroup>
+                <thead><tr><th>{{ i18n.t('eval.questionnaire') }}</th><th>{{ i18n.t('eval.labelEn') }}</th><th>{{ i18n.t('eval.rating') }}</th><th>{{ i18n.t('field.points') }}</th></tr></thead>
+                <tbody>
+                  @for (a of answersFor(ev, fs.factorId); track a.questionId) {
+                    <tr>
+                      <td>{{ i18n.name(a.questionTextEn, a.questionTextAr) }}</td>
+                      <td>{{ i18n.name(a.answerLabelEn, a.answerLabelAr) }}</td>
+                      <td>{{ a.ratingSnapshot }}</td>
+                      <td>{{ a.points }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
         </div>
       }
     } @else if (!error()) { <p>{{ i18n.t('common.loading') }}</p> }
@@ -112,6 +135,20 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
     .sc { text-align:center; }
     .big { font-size:2.4rem; font-weight:800; color:var(--primary); }
     .big.grade { color:var(--success); }
+    .audit-factor { margin-bottom:1.25rem; }
+    .audit-factor:last-child { margin-bottom:0; }
+    .audit-factor-hd {
+      display:flex; align-items:center; justify-content:space-between;
+      font-weight:600; margin-bottom:.4rem;
+    }
+    .pts-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:26px; height:18px; border-radius:4px;
+      font-size:.75rem; font-weight:500;
+      background:var(--primary-soft); color:var(--primary); padding:0 6px;
+    }
+    .audit-table { table-layout:fixed; width:100%; }
+    .audit-table td, .audit-table th { overflow-wrap:break-word; }
   `],
 })
 export class EvaluationDetail {
@@ -140,6 +177,8 @@ export class EvaluationDetail {
       if (ev.status === 'Draft') this.version.set(await this.api.version(ev.methodologyVersionId));
     } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load evaluation.'); }
   }
+
+  answersFor(ev: EvaluationResult, factorId: string) { return ev.answers.filter((a) => a.factorId === factorId); }
 
   isSelected(q: string, o: string) { return (this.selections()[q] ?? []).includes(o); }
   select(q: string, o: string) { this.selections.update((s) => ({ ...s, [q]: [o] })); }

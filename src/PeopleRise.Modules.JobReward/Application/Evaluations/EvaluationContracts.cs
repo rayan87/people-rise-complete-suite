@@ -9,9 +9,13 @@ public record EvaluationCreatedDto(Guid Id, Guid JobId, Guid MethodologyVersionI
 
 public record FactorScoreDto(Guid FactorId, string FactorCode, string FactorNameEn, string? FactorNameAr, int Score);
 
+// Points = round(version.MaxPoints x Factor.Weight / 100 x Question.Weight / 100 x RatingSnapshot / 5) -
+// mirrors ScoringService.Score's per-question formula exactly, computed fresh here (not stored) so it
+// always reflects the pinned methodology version's weights, same pattern as the authoring DTOs.
 public record AnswerAuditDto(
     Guid QuestionId, string QuestionTextEn, string? QuestionTextAr,
-    Guid AnswerOptionId, string AnswerLabelEn, string? AnswerLabelAr, int RatingSnapshot);
+    Guid AnswerOptionId, string AnswerLabelEn, string? AnswerLabelAr, int RatingSnapshot, int Points,
+    Guid FactorId, string FactorCode, string FactorNameEn, string? FactorNameAr);
 
 public record EvaluationResultDto(
     Guid Id, Guid JobId, string JobCode, string JobTitleEn, string? JobTitleAr,

@@ -34,7 +34,11 @@ export interface MethodologyVersionDetail {
 }
 
 export interface FactorScore { factorId: string; factorCode: string; factorNameEn: string; factorNameAr: string | null; score: number; }
-export interface AnswerAudit { questionId: string; questionTextEn: string; questionTextAr: string | null; answerOptionId: string; answerLabelEn: string; answerLabelAr: string | null; ratingSnapshot: number; }
+export interface AnswerAudit {
+  questionId: string; questionTextEn: string; questionTextAr: string | null;
+  answerOptionId: string; answerLabelEn: string; answerLabelAr: string | null; ratingSnapshot: number; points: number;
+  factorId: string; factorCode: string; factorNameEn: string; factorNameAr: string | null;
+}
 export interface EvaluationResult {
   id: string; jobId: string; jobCode: string; jobTitleEn: string; jobTitleAr: string | null;
   methodologyVersionId: string; status: string; totalScore: number | null;
