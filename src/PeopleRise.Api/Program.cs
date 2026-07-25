@@ -40,27 +40,56 @@ app.MapGet("/", () => Results.Ok(new
     }
 }));
 
-app.MapGet("/me/tenants", async (ICurrentUser user, ControlPlaneDbContext cp) =>
+app.MapGet("/me/tenants", async (ICurrentUser user, ControlPlaneDbContext controlPlaneDb) =>
 {
-    if (!user.IsAuthenticated) return Results.Unauthorized();
-    var rows = await cp.Access.Where(a => a.UserId == user.UserId).Include(a => a.Tenant)
-        .Select(a => new { a.TenantId, a.Tenant!.Name, a.Tenant.OwnerType, a.Tenant.Status, a.Role })
-        .ToListAsync();
-    return Results.Ok(rows);
+    if (!user.IsAuthenticated)
+    {
+        return Results.Unauthorized();
+    }
+
+    var tenants = await controlPlaneDb.Access
+        .Where(a => a.UserId == user.UserId)
+        .Include(a => a.Tenant)
+        .Select(a => new 
+        { 
+            a.TenantId, 
+            a.Tenant!.Name, 
+            a.Tenant.OwnerType, 
+            a.Tenant.Status, 
+            a.Role 
+        }).ToListAsync();
+
+    return Results.Ok(tenants);
 });
 
 // Provision a new client (a new Model-A engagement): create DB -> schema -> register -> grant access.
 app.MapPost("/admin/tenants", async (CreateTenant input, ICurrentUser user,
                                       ControlPlaneDbContext cp, TenantConnectionFactory factory) =>
 {
-    if (!user.IsAuthenticated) return Results.Unauthorized();
+    if (!user.IsAuthenticated)
+    {
+        return Results.Unauthorized();
+    }
+
     var dbName = $"pr_tenant_{Guid.NewGuid():N}";
     await Provisioning.CreateDatabaseAsync(configuration.GetConnectionString("Maintenance")!, dbName);
     await JobRewardModule.EnsureSchemaAsync(factory.ForDatabase(dbName));
 
-    var tenant = new Tenant { Name = input.Name, DbName = dbName, OwnerType = input.OwnerType };
+    var tenant = new Tenant 
+    { 
+        Name = input.Name, 
+        DbName = dbName, 
+        OwnerType = input.OwnerType 
+    };
+
     cp.Tenants.Add(tenant);
-    cp.Access.Add(new UserTenantAccess { UserId = user.UserId, TenantId = tenant.Id, Role = AccessRole.Consultant });
+    cp.Access.Add(new UserTenantAccess 
+    { 
+        UserId = user.UserId, 
+        TenantId = tenant.Id, 
+        Role = AccessRole.Consultant 
+    });
+
     await cp.SaveChangesAsync();
     return Results.Created($"/admin/tenants/{tenant.Id}", new { tenant.Id, tenant.Name, tenant.DbName });
 });
@@ -69,10 +98,15 @@ app.MapPost("/admin/tenants", async (CreateTenant input, ICurrentUser user,
 // (Egyptian IT company, ~150–250 staff). Idempotent by name: returns the existing tenant if present.
 app.MapPost("/admin/demo/el-delta", async (ICurrentUser user, ControlPlaneDbContext cp, TenantConnectionFactory factory) =>
 {
-    if (!user.IsAuthenticated) return Results.Unauthorized();
+    if (!user.IsAuthenticated)
+    {
+        return Results.Unauthorized();
+    }
 
     var existing = await cp.Access.Include(a => a.Tenant)
-        .FirstOrDefaultAsync(a => a.UserId == user.UserId && a.Tenant!.Name == "El-Delta");
+        .FirstOrDefaultAsync(a => a.UserId == user.UserId 
+            && a.Tenant!.Name == "El-Delta");
+
     if (existing is not null)
         return Results.Ok(new
         {
@@ -130,28 +164,40 @@ static class DevBootstrap
     public static async Task RunAsync(WebApplication app)
     {
         using var scope = app.Services.CreateScope();
-        var sp = scope.ServiceProvider;
-        var cp = sp.GetRequiredService<ControlPlaneDbContext>();
-        await cp.Database.EnsureCreatedAsync();
+        var serviceProvider = scope.ServiceProvider;
+        var controlPlaneDb = serviceProvider.GetRequiredService<ControlPlaneDbContext>();
+        await controlPlaneDb.Database.EnsureCreatedAsync();
 
-        if (!await cp.Users.AnyAsync(u => u.Id == DevUserId))
+        if (!await controlPlaneDb.Users.AnyAsync(u => u.Id == DevUserId))
         {
-            cp.Users.Add(new AppUser { Id = DevUserId, Email = "dev@peoplerise.local", DisplayName = "Dev Consultant" });
-            await cp.SaveChangesAsync();
+            controlPlaneDb.Users.Add(new AppUser { Id = DevUserId, Email = "dev@peoplerise.local", DisplayName = "Dev Consultant" });
+            await controlPlaneDb.SaveChangesAsync();
         }
 
-        if (!await cp.Tenants.AnyAsync())
+        if (!await controlPlaneDb.Tenants.AnyAsync())
         {
-            var factory = sp.GetRequiredService<TenantConnectionFactory>();
+            var factory = serviceProvider.GetRequiredService<TenantConnectionFactory>();
             var maintenance = app.Configuration.GetConnectionString("Maintenance")!;
             var dbName = $"pr_tenant_{Guid.NewGuid():N}";
             await Provisioning.CreateDatabaseAsync(maintenance, dbName);
             await JobRewardModule.EnsureSchemaAsync(factory.ForDatabase(dbName));
 
-            var tenant = new Tenant { Name = "Demo Client", DbName = dbName, OwnerType = OwnerType.Consulting };
-            cp.Tenants.Add(tenant);
-            cp.Access.Add(new UserTenantAccess { UserId = DevUserId, TenantId = tenant.Id, Role = AccessRole.Consultant });
-            await cp.SaveChangesAsync();
+            var tenant = new Tenant 
+            { 
+                Name = "Demo Client", 
+                DbName = dbName, 
+                OwnerType = OwnerType.Consulting 
+            };
+
+            controlPlaneDb.Tenants.Add(tenant);
+            controlPlaneDb.Access.Add(new UserTenantAccess 
+            { 
+                UserId = DevUserId, 
+                TenantId = tenant.Id, 
+                Role = AccessRole.Consultant 
+            });
+
+            await controlPlaneDb.SaveChangesAsync();
             app.Logger.LogInformation("Seeded demo tenant {TenantId} (db {Db})", tenant.Id, dbName);
         }
 

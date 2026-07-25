@@ -9,15 +9,15 @@ namespace PeopleRise.Tenancy;
 /// <summary>DEV ONLY: reads X-User-Id. Swap for JWT/OIDC auth in production.</summary>
 public sealed class CurrentUserMiddleware(RequestDelegate next)
 {
-    public async Task Invoke(HttpContext ctx, ICurrentUser user)
+    public async Task Invoke(HttpContext httpContext, ICurrentUser user)
     {
-        if (ctx.Request.Headers.TryGetValue("X-User-Id", out var v) 
+        if (httpContext.Request.Headers.TryGetValue("X-User-Id", out var v) 
             && Guid.TryParse(v, out var id))
         {
             user.Set(id);
         }
             
-        await next(ctx);
+        await next(httpContext);
     }
 }
 
@@ -25,32 +25,32 @@ public sealed class CurrentUserMiddleware(RequestDelegate next)
 /// and binds the per-request connection string. Authorization and routing happen together.</summary>
 public sealed class TenantResolutionMiddleware(RequestDelegate next)
 {
-    public async Task Invoke(HttpContext ctx, ICurrentUser user, ITenantContext tenant,
-                             ControlPlaneDbContext cp, TenantConnectionFactory factory)
+    public async Task Invoke(HttpContext httpContext, ICurrentUser user, ITenantContext tenant,
+                             ControlPlaneDbContext controlPlaneDbContext, TenantConnectionFactory factory)
     {
-        if (ctx.Request.Headers.TryGetValue("X-Tenant-Id", out var raw) 
+        if (httpContext.Request.Headers.TryGetValue("X-Tenant-Id", out var raw) 
             && Guid.TryParse(raw, out var tenantId))
         {
             if (!user.IsAuthenticated)
             { 
-                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; 
-                await ctx.Response.WriteAsync("Missing X-User-Id."); 
+                httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized; 
+                await httpContext.Response.WriteAsync("Missing X-User-Id."); 
                 return; 
             }
 
-            var access = await cp.Access.Include(a => a.Tenant)
+            var access = await controlPlaneDbContext.Access.Include(a => a.Tenant)
                 .FirstOrDefaultAsync(a => a.UserId == user.UserId && a.TenantId == tenantId
                                        && a.Tenant!.Status == TenantStatus.Active);
             if (access is null)
             { 
-                ctx.Response.StatusCode = StatusCodes.Status403Forbidden; 
-                await ctx.Response.WriteAsync("No access to tenant, or tenant is not active."); 
+                httpContext.Response.StatusCode = StatusCodes.Status403Forbidden; 
+                await httpContext.Response.WriteAsync("No access to tenant, or tenant is not active."); 
                 return; 
             }
 
             tenant.Set(access.TenantId, factory.ForDatabase(access.Tenant!.DbName));
         }
-        await next(ctx);
+        await next(httpContext);
     }
 }
 
