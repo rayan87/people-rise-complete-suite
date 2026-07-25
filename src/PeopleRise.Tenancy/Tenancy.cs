@@ -11,8 +11,12 @@ public sealed class CurrentUserMiddleware(RequestDelegate next)
 {
     public async Task Invoke(HttpContext ctx, ICurrentUser user)
     {
-        if (ctx.Request.Headers.TryGetValue("X-User-Id", out var v) && Guid.TryParse(v, out var id))
+        if (ctx.Request.Headers.TryGetValue("X-User-Id", out var v) 
+            && Guid.TryParse(v, out var id))
+        {
             user.Set(id);
+        }
+            
         await next(ctx);
     }
 }
@@ -24,16 +28,25 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
     public async Task Invoke(HttpContext ctx, ICurrentUser user, ITenantContext tenant,
                              ControlPlaneDbContext cp, TenantConnectionFactory factory)
     {
-        if (ctx.Request.Headers.TryGetValue("X-Tenant-Id", out var raw) && Guid.TryParse(raw, out var tid))
+        if (ctx.Request.Headers.TryGetValue("X-Tenant-Id", out var raw) 
+            && Guid.TryParse(raw, out var tenantId))
         {
             if (!user.IsAuthenticated)
-            { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; await ctx.Response.WriteAsync("Missing X-User-Id."); return; }
+            { 
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; 
+                await ctx.Response.WriteAsync("Missing X-User-Id."); 
+                return; 
+            }
 
             var access = await cp.Access.Include(a => a.Tenant)
-                .FirstOrDefaultAsync(a => a.UserId == user.UserId && a.TenantId == tid
+                .FirstOrDefaultAsync(a => a.UserId == user.UserId && a.TenantId == tenantId
                                        && a.Tenant!.Status == TenantStatus.Active);
             if (access is null)
-            { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; await ctx.Response.WriteAsync("No access to tenant, or tenant is not active."); return; }
+            { 
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden; 
+                await ctx.Response.WriteAsync("No access to tenant, or tenant is not active."); 
+                return; 
+            }
 
             tenant.Set(access.TenantId, factory.ForDatabase(access.Tenant!.DbName));
         }
@@ -43,12 +56,12 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
 
 public static class TenancyExtensions
 {
-    public static IServiceCollection AddTenancy(this IServiceCollection s, string tenantConnectionTemplate)
+    public static IServiceCollection AddTenancy(this IServiceCollection services, string tenantConnectionTemplate)
     {
-        s.AddScoped<ICurrentUser, CurrentUser>();
-        s.AddScoped<ITenantContext, TenantContext>();
-        s.AddSingleton(new TenantConnectionFactory(tenantConnectionTemplate));
-        return s;
+        services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddScoped<ITenantContext, TenantContext>();
+        services.AddSingleton(new TenantConnectionFactory(tenantConnectionTemplate));
+        return services;
     }
 
     public static IApplicationBuilder UseTenancy(this IApplicationBuilder app)

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,11 +22,11 @@ public static class JobRewardModule
     /// handler in this assembly (scanned — new handlers need no registration).</summary>
     public static IServiceCollection AddJobRewardModule(this IServiceCollection s)
     {
-        s.AddDbContext<JobRewardDbContext>((sp, opt) =>
+        s.AddDbContext<JobRewardDbContext>((serviceProvider, options) =>
         {
             // sp is the request scope; ITenantContext was set by the tenancy middleware.
-            var tenant = sp.GetRequiredService<ITenantContext>();
-            opt.UseNpgsql(tenant.ConnectionString);
+            var tenant = serviceProvider.GetRequiredService<ITenantContext>();
+            options.UseNpgsql(tenant.ConnectionString);
         });
         s.AddScoped<ScoringService>();
         s.AddHandlersFromAssembly(typeof(JobRewardModule).Assembly);
@@ -38,18 +37,24 @@ public static class JobRewardModule
     /// Dev convenience via EnsureCreated; switch to migrations for production (see README).</summary>
     public static async Task EnsureSchemaAsync(string connectionString)
     {
-        var opt = new DbContextOptionsBuilder<JobRewardDbContext>().UseNpgsql(connectionString).Options;
-        await using var db = new JobRewardDbContext(opt);
-        await db.Database.EnsureCreatedAsync();
+        var options = new DbContextOptionsBuilder<JobRewardDbContext>()
+            .UseNpgsql(connectionString)
+            .Options;
+
+        await using var dbContext = new JobRewardDbContext(options);
+        await dbContext.Database.EnsureCreatedAsync();
     }
 
     /// <summary>Populates a freshly-provisioned tenant DB with the El-Delta demo dataset. No request
     /// context, so it builds its own DbContext from the connection string (like EnsureSchemaAsync).</summary>
     public static async Task<DemoSeedSummary> SeedElDeltaDemoAsync(string connectionString)
     {
-        var opt = new DbContextOptionsBuilder<JobRewardDbContext>().UseNpgsql(connectionString).Options;
-        await using var db = new JobRewardDbContext(opt);
-        return await ElDeltaDemoSeeder.SeedAsync(db);
+        var options = new DbContextOptionsBuilder<JobRewardDbContext>()
+            .UseNpgsql(connectionString)
+            .Options;
+
+        await using var dbContext = new JobRewardDbContext(options);
+        return await ElDeltaDemoSeeder.SeedAsync(dbContext);
     }
 
     /// <summary>Maps every submodule's tenant-scoped endpoints.</summary>

@@ -5,10 +5,11 @@ using PeopleRise.Modules.JobReward;
 using PeopleRise.Tenancy;
 
 var builder = WebApplication.CreateBuilder(args);
-var cfg = builder.Configuration;
+var configuration = builder.Configuration;
 
-builder.Services.AddDbContext<ControlPlaneDbContext>(o => o.UseNpgsql(cfg.GetConnectionString("ControlPlane")));
-builder.Services.AddTenancy(cfg.GetConnectionString("TenantTemplate")!);
+builder.Services.AddDbContext<ControlPlaneDbContext>(options => 
+    options.UseNpgsql(configuration.GetConnectionString("ControlPlane")));
+builder.Services.AddTenancy(configuration.GetConnectionString("TenantTemplate")!);
 builder.Services.AddJobRewardModule();
 
 // DEV: allow the Angular dev server to call the API with the dev auth headers.
@@ -54,7 +55,7 @@ app.MapPost("/admin/tenants", async (CreateTenant input, ICurrentUser user,
 {
     if (!user.IsAuthenticated) return Results.Unauthorized();
     var dbName = $"pr_tenant_{Guid.NewGuid():N}";
-    await Provisioning.CreateDatabaseAsync(cfg.GetConnectionString("Maintenance")!, dbName);
+    await Provisioning.CreateDatabaseAsync(configuration.GetConnectionString("Maintenance")!, dbName);
     await JobRewardModule.EnsureSchemaAsync(factory.ForDatabase(dbName));
 
     var tenant = new Tenant { Name = input.Name, DbName = dbName, OwnerType = input.OwnerType };
@@ -82,7 +83,7 @@ app.MapPost("/admin/demo/el-delta", async (ICurrentUser user, ControlPlaneDbCont
         });
 
     var dbName = $"pr_tenant_{Guid.NewGuid():N}";
-    await Provisioning.CreateDatabaseAsync(cfg.GetConnectionString("Maintenance")!, dbName);
+    await Provisioning.CreateDatabaseAsync(configuration.GetConnectionString("Maintenance")!, dbName);
     var conn = factory.ForDatabase(dbName);
     await JobRewardModule.EnsureSchemaAsync(conn);
     var summary = await JobRewardModule.SeedElDeltaDemoAsync(conn);
