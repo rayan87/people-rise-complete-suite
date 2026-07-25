@@ -12,10 +12,10 @@ public interface ITenantContext
 public sealed class TenantContext : ITenantContext
 {
     private Guid? _id;
-    private string? _cs;
-    public bool IsResolved => _cs is not null;
+    private string? _connectionString;
+    public bool IsResolved => _connectionString is not null;
     public Guid TenantId => _id ?? throw new InvalidOperationException("No tenant resolved for this request.");
-    public string ConnectionString => _cs
+    public string ConnectionString => _connectionString
         ?? throw new InvalidOperationException("No tenant resolved. Provide the X-Tenant-Id header for tenant-scoped calls.");
-    public void Set(Guid tenantId, string connectionString) { _id = tenantId; _cs = connectionString; }
+    public void Set(Guid tenantId, string connectionString) { _id = tenantId; _connectionString = connectionString; }
 }
