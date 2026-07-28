@@ -118,10 +118,26 @@ These are architectural decisions, not preferences. Breaking them is a bug.
 
 ## Compensation rules (Farouk's methodology — authoritative)
 
-- **Spread = (max / min) − 1.** Default **67%** → min = 75% of midpoint, max = 125% of midpoint.
-- **Overlap = (midpoint current / midpoint previous) − 1** (i.e. midpoint progression). Default **25%.**
-- Midpoint = arithmetic mean of min and max. Because progression (25%) < spread (67%), adjacent bands
-  overlap — intended. These are editable starting points, tunable per grade.
+- **Min/Max are fixed to the midpoint, not user input.** Min = midpoint − 25%, Max = midpoint + 25%. The
+  25% is a hardcoded constant (`SalaryBand.FixedHalfSpreadPct`) — there is no field anywhere to edit it.
+- **Spread is a derived OUTPUT, never an input.** Spread = (max / min) − 1. Given the fixed ±25% rule this
+  is always ≈**67%** — it is display-only, computed on the fly, and is not a persisted/settable column.
+- **Overlap is also a derived OUTPUT**, not stored as a raw pass-through: Overlap = (midpoint of this grade
+  / midpoint of the previous grade, by `Grade.Rank`) − 1. The first grade has no previous grade, so its
+  overlap is `null` — its overlap input is dimmed in the UI; only its midpoint is editable.
+- **Overlap and midpoint are two editable views of the same relationship, for grade 2+:**
+  editing overlap sets `midpoint = previousMidpoint + previousMidpoint × overlap`; editing midpoint
+  recomputes `overlap = midpoint / previousMidpoint − 1`. Whichever one the user edits, the OTHER is
+  recalculated and persisted — the backend never trusts a client-supplied overlap as-is, it always
+  re-derives it from the two midpoints. **Editing a grade's midpoint cascades upward**: every later grade
+  (by rank) keeps its own stored overlap fixed and gets its midpoint re-derived off the new value below
+  it, rippling all the way up the ladder. The cascade stops at the first grade with no existing band yet
+  (a gap breaks the chain, same as a null overlap would).
+- **Auto-generate bands grid**: takes a Base Midpoint and a **Grade progression %** (default **25%**,
+  same knob as per-grade overlap — there is no separate "spread" input here either). The first grade seeds
+  from the base midpoint; each subsequent grade's midpoint = previous grade's (already-rounded) midpoint ×
+  (1 + progression), rounded to the nearest 100. Because min/max are fixed at ±25% of midpoint and default
+  progression (25%) < spread (~67%), adjacent bands overlap — intended.
 - **Market data binds to the JOB** (the unit the market prices). Family + level are fallback grains when
   a survey is coarser. A position inherits its band via job → grade → band; only the employee has actual
   pay (→ compa-ratio = pay / midpoint; below 75% = below scale).

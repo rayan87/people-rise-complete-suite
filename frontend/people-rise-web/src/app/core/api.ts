@@ -74,9 +74,9 @@ export class Api {
 
   // salary builder
   salaryBands() { return this.get<SalaryBandRow[]>('/salary-bands'); }
-  createSalaryBand(b: { gradeId: string; currency: string; midpoint: number; spreadPct: number; overlapPct: number; effectiveDate: string }) { return this.post<SalaryBandRow>('/salary-bands', b); }
-  updateSalaryBand(id: string, b: { currency: string; midpoint: number; spreadPct: number; overlapPct: number; effectiveDate: string }) { return this.put<SalaryBandRow>(`/salary-bands/${id}`, b); }
-  generateBands(b: { baseMidpoint: number; spreadPct: number; progressionPct: number; currency: string; effectiveDate: string }) { return this.post<SalaryBandRow[]>('/salary-bands/generate', b); }
+  createSalaryBand(b: { gradeId: string; currency: string; midpoint?: number; overlapPct?: number; effectiveDate: string }) { return this.post<SalaryBandRow>('/salary-bands', b); }
+  updateSalaryBand(id: string, b: { currency: string; midpoint?: number; overlapPct?: number; effectiveDate: string }) { return this.put<SalaryBandRow>(`/salary-bands/${id}`, b); }
+  generateBands(b: { baseMidpoint: number; progressionPct: number; currency: string; effectiveDate: string }) { return this.post<SalaryBandRow[]>('/salary-bands/generate', b); }
 
   // demo
   seedElDelta() { return this.post<{ id: string; name: string }>('/admin/demo/el-delta', {}); }

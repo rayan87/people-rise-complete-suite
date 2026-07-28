@@ -52,5 +52,5 @@ export interface EvaluationListItem {
 }
 export interface AnswerSelection { questionId: string; answerOptionIds: string[]; }
 
-export interface SalaryBandInfo { id: string; currency: string; minAmount: number; midpoint: number; maxAmount: number; spreadPct: number; overlapPct: number; effectiveDate: string; status: string; }
+export interface SalaryBandInfo { id: string; currency: string; minAmount: number; midpoint: number; maxAmount: number; spreadPct: number; overlapPct: number | null; effectiveDate: string; status: string; }
 export interface SalaryBandRow { gradeId: string; gradeCode: string; gradeNameEn: string; gradeNameAr: string | null; rank: number; levelCode: string | null; band: SalaryBandInfo | null; }

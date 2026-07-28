@@ -473,13 +473,16 @@ internal static class ElDeltaDemoSeeder
             evalCount++;
         }
 
-        // ---- Salary bands (Farouk's defaults: ±25% spread, 25% midpoint progression), EGP ----
+        // ---- Salary bands (Farouk's defaults: fixed ±25% spread, 25% grade progression), EGP ----
         var effective = new DateOnly(2026, 1, 1);
         var bandCount = 0;
+        decimal? previousMidpoint = null;
         foreach (var grade in grades.Values)
         {
-            var midpoint = (decimal)(Math.Round(8000 * Math.Pow(1.25, grade.Rank - 1) / 100.0) * 100);
-            db.SalaryBands.Add(SalaryBand.Create(grade.Id, "EGP", midpoint, spreadPct: 67m, overlapPct: 25m, effective));
+            var raw = previousMidpoint is { } prev ? prev * 1.25m : 8000m;
+            var midpoint = Math.Round(raw / 100m, MidpointRounding.AwayFromZero) * 100m;
+            db.SalaryBands.Add(SalaryBand.Create(grade.Id, "EGP", midpoint, previousMidpoint, effective));
+            previousMidpoint = midpoint;
             bandCount++;
         }
 

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Domain;
@@ -37,8 +38,10 @@ internal class BandPositioningPolicy : Entity   // per family: lead / match / la
     public DateOnly EffectiveDate { get; set; }
 }
 
-internal class SalaryBand : Entity   // min = mid*(1-spread%); max = mid*(1+spread%); overlap = midpoint progression
+internal class SalaryBand : Entity   // min = midpoint-25%, max = midpoint+25% (fixed); spread & overlap are derived outputs
 {
+    private const decimal FixedHalfSpreadPct = 25m;   // CLAUDE.md: min = midpoint-25%, max = midpoint+25%; not user-editable
+
     public Guid GradeId { get; private set; }
     public Grade? Grade { get; private set; }
     public Guid? JobFamilyId { get; private set; }
@@ -47,47 +50,55 @@ internal class SalaryBand : Entity   // min = mid*(1-spread%); max = mid*(1+spre
     public decimal Midpoint { get; private set; }
     public decimal MinAmount { get; private set; }
     public decimal MaxAmount { get; private set; }
-    public decimal SpreadPct { get; private set; } = 67m;
-    public decimal OverlapPct { get; private set; } = 25m;   // configurable; drives midpoint-to-midpoint progression
+    public decimal? OverlapPct { get; private set; }   // (this midpoint / previous grade's midpoint) - 1; null for the first grade
     public Guid? SourceSnapshotId { get; private set; }
     public Guid? PositioningId { get; private set; }
     public DateOnly EffectiveDate { get; private set; }
     public BandStatus Status { get; private set; } = BandStatus.Draft;
 
+    [NotMapped]
+    public decimal SpreadPct => MinAmount <= 0 ? 0m : (MaxAmount / MinAmount - 1m) * 100m;
+
     private SalaryBand() { }   // EF
 
-    public static SalaryBand Create(Guid gradeId, string currency, decimal midpoint, decimal spreadPct,
-        decimal overlapPct, DateOnly effectiveDate, BandStatus status = BandStatus.Published, Guid? jobFamilyId = null)
+    public static SalaryBand Create(Guid gradeId,
+        string currency,
+        decimal midpoint,
+        decimal? previousGradeMidpoint,
+        DateOnly effectiveDate,
+        BandStatus status = BandStatus.Published,
+        Guid? jobFamilyId = null)
     {
         var band = new SalaryBand
         {
             GradeId = gradeId, JobFamilyId = jobFamilyId, Currency = currency,
-            SpreadPct = spreadPct, OverlapPct = overlapPct, EffectiveDate = effectiveDate, Status = status,
+            EffectiveDate = effectiveDate, Status = status,
         };
-        band.ApplyMidpoint(midpoint);
+        band.ApplyMidpoint(midpoint, previousGradeMidpoint);
         return band;
     }
 
-    /// <summary>Re-price the band: min/max are always derived from midpoint ± spread (never set directly).</summary>
-    public void Update(decimal midpoint, decimal spreadPct, decimal overlapPct, string currency, DateOnly effectiveDate)
+    /// <summary>Re-price the band: min/max/overlap are always derived from midpoint (never set directly).</summary>
+    public void Update(decimal midpoint, decimal? previousGradeMidpoint, string currency, DateOnly effectiveDate)
     {
-        SpreadPct = spreadPct;
-        OverlapPct = overlapPct;
         Currency = currency;
         EffectiveDate = effectiveDate;
-        ApplyMidpoint(midpoint);
+        ApplyMidpoint(midpoint, previousGradeMidpoint);
     }
 
     public void Retire() => Status = BandStatus.Retired;
 
-    private void ApplyMidpoint(decimal midpoint)
+    private void ApplyMidpoint(decimal midpoint, decimal? previousGradeMidpoint)
     {
-        // SpreadPct is (max/min − 1), e.g. 67% → min = 75% of midpoint, max = 125% (CLAUDE.md).
-        // From midpoint M and spread s: min = 2M/(2+s), max = 2M(1+s)/(2+s); mean(min,max) == M.
         Midpoint = midpoint;
-        var s = SpreadPct / 100m;
-        MinAmount = decimal.Round(2m * midpoint / (2m + s), 4);
-        MaxAmount = decimal.Round(2m * midpoint * (1m + s) / (2m + s), 4);
+
+        var half = FixedHalfSpreadPct / 100m;
+        MinAmount = decimal.Round(midpoint * (1m - half), 4);
+        MaxAmount = decimal.Round(midpoint * (1m + half), 4);
+
+        OverlapPct = previousGradeMidpoint is { } prev && prev > 0
+            ? decimal.Round((midpoint / prev - 1m) * 100m, 4)
+            : null;
     }
 }
 
