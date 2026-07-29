@@ -138,6 +138,21 @@ app.MapPost("/admin/demo/el-delta", async (ICurrentUser user, ControlPlaneDbCont
     });
 });
 
+app.MapGet("/admin/migrate-dbs", async (ControlPlaneDbContext controlPlaneDb,
+    TenantConnectionFactory connectionFactory) =>
+{
+    var tenants = await controlPlaneDb.Tenants.ToListAsync();
+
+    foreach (var tenant in tenants)
+    {
+        var dbConnection = connectionFactory.ForDatabase(tenant.DbName);
+
+        await JobRewardModule.EnsureSchemaAsync(dbConnection);
+    }
+
+    return Results.Ok($"{tenants.Count} dbs have been migrated.");
+});
+
 app.MapJobRewardEndpoints();
 
 app.Run();
