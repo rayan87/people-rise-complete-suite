@@ -28,7 +28,7 @@ import { Job, EvaluationListItem, Grade } from '../../core/models';
       </div>
 
       <div class="chips" style="margin-bottom:1.25rem">
-        <span class="chip">{{ i18n.t('field.level') }}: {{ i18n.name(j.levelNameEn, j.levelNameAr) }}</span>
+        <span class="chip">{{ i18n.t('field.level') }}: {{ j.levelNameEn ? i18n.name(j.levelNameEn, j.levelNameAr) : i18n.t('jobs.notGraded') }}</span>
         @if (j.jobFamilyCode) { <span class="chip">{{ i18n.t('field.family') }}: {{ i18n.name(j.jobFamilyNameEn, j.jobFamilyNameAr) }}</span> }
         <span class="chip {{ j.gradeCode ? 'good' : '' }}">{{ i18n.t('field.grade') }}: {{ j.gradeCode ?? '—' }}</span>
         @if (j.gradeSource) { <span class="chip">{{ i18n.t('job.provenance.' + j.gradeSource.toLowerCase()) }}</span> }

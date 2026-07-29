@@ -34,11 +34,10 @@ import { Job, Level, JobFamily } from '../../core/models';
     @if (error()) { <div class="alert error">{{ error() }}</div> }
     @if (!session.hasTenant()) { <div class="alert info">{{ i18n.t('common.selectClient') }}</div> }
 
-    @if (outOfScopeLevels().length) {
+    @if (ungradedCount() > 0) {
       <div class="alert info" style="margin-bottom:1rem">
-        @for (l of outOfScopeLevels(); track l.id) {
-          <span><strong>{{ l.code }}</strong> ({{ i18n.name(l.nameEn, l.nameAr) }}) is out of evaluation scope and not shown in the grid. </span>
-        }
+        {{ ungradedCount() }} job(s) aren't graded yet, so they have no level and don't appear in this grid.
+        See <strong>{{ i18n.t('nav.jobs') }}</strong> for the full list.
       </div>
     }
 
@@ -46,7 +45,7 @@ import { Job, Level, JobFamily } from '../../core/models';
       @if (loading()) {
         <p class="muted">{{ i18n.t('common.loading') }}</p>
       } @else if (matrixLevels().length === 0) {
-        <p class="empty">No levels in evaluation scope. Add levels in <strong>Configuration → Levels, Families &amp; Grades</strong>.</p>
+        <p class="empty">No levels yet. Add levels in <strong>Configuration → Levels, Families &amp; Grades</strong>.</p>
       } @else {
         <div class="matrix-wrap">
           <table class="matrix">
@@ -123,19 +122,21 @@ export class Grading {
   readonly error = signal<string | null>(null);
 
   readonly matrixLevels = computed(() =>
-    this.levels().filter(l => l.inEvalScope).sort((a, b) => b.rank - a.rank)
-  );
-
-  readonly outOfScopeLevels = computed(() =>
-    this.levels().filter(l => !l.inEvalScope)
+    [...this.levels()].sort((a, b) => b.rank - a.rank)
   );
 
   readonly matrixFamilies = computed(() =>
     [...this.families()].sort((a, b) => a.code.localeCompare(b.code))
   );
 
+  // Ungraded jobs have no resolvable level yet (level flows via Grade), so they can't be placed
+  // in this level x family grid at all - not just filtered out of it.
+  readonly ungradedCount = computed(() =>
+    this.jobs().filter(j => j.levelId === null).length
+  );
+
   readonly hasUnassigned = computed(() =>
-    this.jobs().some(j => j.jobFamilyId === null)
+    this.jobs().some(j => j.levelId !== null && j.jobFamilyId === null)
   );
 
   jobsAt(levelId: string, familyId: string | null): Job[] {

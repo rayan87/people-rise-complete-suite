@@ -14,7 +14,7 @@ internal sealed class ListLevelsHandler(JobRewardDbContext db)
     public async Task<Result<IReadOnlyList<LevelDto>>> Handle(ListLevelsQuery query, CancellationToken ct)
     {
         var rows = await db.Levels.OrderBy(l => l.Rank)
-            .Select(l => new LevelDto(l.Id, l.Code, l.NameEn, l.NameAr, l.Rank, l.InEvalScope))
+            .Select(l => new LevelDto(l.Id, l.Code, l.NameEn, l.NameAr, l.Rank))
             .ToListAsync(ct);
         return Result<IReadOnlyList<LevelDto>>.Success(rows);
     }

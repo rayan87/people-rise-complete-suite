@@ -2,17 +2,19 @@
 
 export interface TenantAccess { tenantId: string; name: string; ownerType: string | number; status: string | number; role: string | number; }
 
-export interface Level { id: string; code: string; nameEn: string; nameAr: string | null; rank: number; inEvalScope: boolean; }
-export interface Grade { id: string; code: string; nameEn: string; nameAr: string | null; rank: number; levelId: string | null; levelCode: string | null; }
+export interface Level { id: string; code: string; nameEn: string; nameAr: string | null; rank: number; }
+export interface Grade { id: string; code: string; nameEn: string; nameAr: string | null; rank: number; levelId: string; levelCode: string | null; }
 export interface JobFamily { id: string; code: string; nameEn: string; nameAr: string | null; }
 
 export interface JobBand { currency: string; minAmount: number; midpoint: number; maxAmount: number; }
+// levelId/levelCode/levelNameEn/levelNameAr are derived transitively via Grade - null until the job is
+// graded (Draft), whether via an approved evaluation or a direct manual assignment.
 export interface Job {
   id: string; code: string; titleEn: string; titleAr: string | null;
   descriptionEn: string | null; descriptionAr: string | null;
-  levelId: string; levelCode: string | null; levelNameEn: string | null; levelNameAr: string | null;
   jobFamilyId: string | null; jobFamilyCode: string | null; jobFamilyNameEn: string | null; jobFamilyNameAr: string | null;
   gradeId: string | null; gradeCode: string | null; gradeNameEn: string | null; gradeNameAr: string | null;
+  levelId: string | null; levelCode: string | null; levelNameEn: string | null; levelNameAr: string | null;
   status: string; gradeSource: string | null; band: JobBand | null;
 }
 

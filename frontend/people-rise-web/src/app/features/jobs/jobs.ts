@@ -47,15 +47,6 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
         </div>
         <div class="row">
           <div class="field">
-            <label>{{ i18n.t('field.level') }}</label>
-            <select [(ngModel)]="form.levelId">
-              <option [ngValue]="''">—</option>
-              @for (l of levels(); track l.id) {
-                <option [ngValue]="l.id">{{ i18n.name(l.nameEn, l.nameAr) }} ({{ l.code }})</option>
-              }
-            </select>
-          </div>
-          <div class="field">
             <label>{{ i18n.t('field.family') }} <span class="optional">({{ i18n.t('common.optional') }})</span></label>
             <select [(ngModel)]="form.jobFamilyId">
               <option [ngValue]="null">—</option>
@@ -63,6 +54,7 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
             </select>
           </div>
         </div>
+        <p class="faint" style="font-size:.8rem">{{ i18n.t('jobs.levelHint') }}</p>
         <button (click)="add()" [disabled]="!canAdd()">{{ i18n.t('common.create') }}</button>
       </div>
     }
@@ -163,12 +155,6 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
                       <div class="field"><label>Title (EN)</label><input [(ngModel)]="editForm.titleEn" /></div>
                       <div class="field"><label>Title (AR) <span class="optional">(opt.)</span></label><input [(ngModel)]="editForm.titleAr" dir="rtl" /></div>
                       <div class="field">
-                        <label>Level</label>
-                        <select [(ngModel)]="editForm.levelId">
-                          @for (l of levels(); track l.id) { <option [value]="l.id">{{ l.code }}</option> }
-                        </select>
-                      </div>
-                      <div class="field">
                         <label>Family</label>
                         <select [(ngModel)]="editForm.jobFamilyId">
                           <option [ngValue]="null">—</option>
@@ -216,8 +202,8 @@ export class Jobs {
   readonly filterStatus = signal('');
   readonly filterGrade = signal('');
 
-  form = { code: '', titleEn: '', titleAr: '', levelId: '', jobFamilyId: null as string | null };
-  editForm = { code: '', titleEn: '', titleAr: '', levelId: '', jobFamilyId: null as string | null };
+  form = { code: '', titleEn: '', titleAr: '', jobFamilyId: null as string | null };
+  editForm = { code: '', titleEn: '', titleAr: '', jobFamilyId: null as string | null };
 
   readonly filtered = computed(() => {
     let result = this.jobs();
@@ -230,12 +216,12 @@ export class Jobs {
 
   constructor() { effect(() => { this.session.tenantId(); this.load(); }); }
 
-  canAdd() { return this.session.hasTenant() && !!this.form.code && !!this.form.titleEn && !!this.form.levelId; }
+  canAdd() { return this.session.hasTenant() && !!this.form.code && !!this.form.titleEn; }
   clearFilters() { this.filterFamily.set(''); this.filterLevel.set(''); this.filterStatus.set(''); this.filterGrade.set(''); }
 
   startEdit(j: Job) {
     this.editingId.set(j.id);
-    this.editForm = { code: j.code, titleEn: j.titleEn, titleAr: j.titleAr ?? '', levelId: j.levelId, jobFamilyId: j.jobFamilyId };
+    this.editForm = { code: j.code, titleEn: j.titleEn, titleAr: j.titleAr ?? '', jobFamilyId: j.jobFamilyId };
   }
 
   private async load() {
@@ -252,9 +238,9 @@ export class Jobs {
     try {
       await this.api.createJob({
         code: this.form.code, titleEn: this.form.titleEn, titleAr: this.form.titleAr || null,
-        levelId: this.form.levelId, descriptionEn: null, descriptionAr: null, jobFamilyId: this.form.jobFamilyId,
+        descriptionEn: null, descriptionAr: null, jobFamilyId: this.form.jobFamilyId,
       });
-      this.form = { code: '', titleEn: '', titleAr: '', levelId: '', jobFamilyId: null };
+      this.form = { code: '', titleEn: '', titleAr: '', jobFamilyId: null };
       this.showForm.set(false);
       this.toast.success(this.i18n.t('toast.created'));
       await this.load();
@@ -266,7 +252,7 @@ export class Jobs {
     try {
       await this.api.updateJob(id, {
         code: this.editForm.code, titleEn: this.editForm.titleEn, titleAr: this.editForm.titleAr || null,
-        levelId: this.editForm.levelId, descriptionEn: null, descriptionAr: null, jobFamilyId: this.editForm.jobFamilyId,
+        descriptionEn: null, descriptionAr: null, jobFamilyId: this.editForm.jobFamilyId,
       });
       this.editingId.set(null);
       this.toast.success(this.i18n.t('toast.saved'));

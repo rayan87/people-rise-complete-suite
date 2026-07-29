@@ -5,7 +5,7 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Levels;
 
-public sealed record UpdateLevelCommand(Guid Id, string Code, string NameEn, string? NameAr, int Rank, bool InEvalScope);
+public sealed record UpdateLevelCommand(Guid Id, string Code, string NameEn, string? NameAr, int Rank);
 
 internal sealed class UpdateLevelHandler(JobRewardDbContext db)
     : ICommandHandler<UpdateLevelCommand, Result<LevelDto>>
@@ -24,9 +24,9 @@ internal sealed class UpdateLevelHandler(JobRewardDbContext db)
             return Error.NotFound("Level not found.");
         }
 
-        level.Update(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank, cmd.InEvalScope);
+        level.Update(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank);
         await db.SaveChangesAsync(ct);
-        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank, level.InEvalScope);
+        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank);
     }
 }
 

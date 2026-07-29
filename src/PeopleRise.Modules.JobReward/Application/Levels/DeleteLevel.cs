@@ -20,15 +20,11 @@ internal sealed class DeleteLevelHandler(JobRewardDbContext db)
             return Error.NotFound("Level not found.");
         }
 
-        var jobCount = await db.Jobs.CountAsync(j => j.LevelId == cmd.Id, ct);
         var gradeCount = await db.Grades.CountAsync(g => g.LevelId == cmd.Id, ct);
 
-        if (jobCount > 0 || gradeCount > 0)
+        if (gradeCount > 0)
         {
-            var parts = new List<string>();
-            if (jobCount > 0) parts.Add($"{jobCount} job(s)");
-            if (gradeCount > 0) parts.Add($"{gradeCount} grade(s)");
-            return Error.Conflict($"Level is in use by {string.Join(" and ", parts)} — reassign them before deleting.");
+            return Error.Conflict($"Level is in use by {gradeCount} grade(s) — reassign them before deleting.");
         }
 
         db.Levels.Remove(level);

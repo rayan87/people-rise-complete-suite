@@ -14,21 +14,20 @@ internal class OrgUnit : Entity
     public string Name { get; set; } = "";
 }
 
-internal class Level : Entity   // the five El-Delta levels; C-level has InEvalScope = false
+internal class Level : Entity   // the five El-Delta levels
 {
     public string Code { get; private set; } = "";
     public string NameEn { get; private set; } = "";
     public string? NameAr { get; private set; }
     public int Rank { get; private set; }
-    public bool InEvalScope { get; private set; } = true;
 
     private Level() { }   // EF
 
-    public static Level Create(string code, string nameEn, string? nameAr, int rank, bool inEvalScope) =>
-        new() { Code = code, NameEn = nameEn, NameAr = nameAr, Rank = rank, InEvalScope = inEvalScope };
+    public static Level Create(string code, string nameEn, string? nameAr, int rank) =>
+        new() { Code = code, NameEn = nameEn, NameAr = nameAr, Rank = rank };
 
-    public void Update(string code, string nameEn, string? nameAr, int rank, bool inEvalScope)
-    { Code = code; NameEn = nameEn; NameAr = nameAr; Rank = rank; InEvalScope = inEvalScope; }
+    public void Update(string code, string nameEn, string? nameAr, int rank)
+    { Code = code; NameEn = nameEn; NameAr = nameAr; Rank = rank; }
 }
 
 internal class JobFamily : Entity   // horizontal cut; nullable on Job, added in the design phase
@@ -52,15 +51,15 @@ internal class Grade : Entity
     public string NameEn { get; private set; } = "";
     public string? NameAr { get; private set; }
     public int Rank { get; private set; }
-    public Guid? LevelId { get; private set; }
+    public Guid LevelId { get; private set; }
     public Level? Level { get; private set; }
 
     private Grade() { }   // EF
 
-    public static Grade Create(string code, string nameEn, string? nameAr, int rank, Guid? levelId) =>
+    public static Grade Create(string code, string nameEn, string? nameAr, int rank, Guid levelId) =>
         new() { Code = code, NameEn = nameEn, NameAr = nameAr, Rank = rank, LevelId = levelId };
 
-    public void Update(string code, string nameEn, string? nameAr, int rank, Guid? levelId)
+    public void Update(string code, string nameEn, string? nameAr, int rank, Guid levelId)
     { Code = code; NameEn = nameEn; NameAr = nameAr; Rank = rank; LevelId = levelId; }
 }
 
@@ -71,28 +70,26 @@ internal class Job : Entity   // a role DEFINITION - the thing you evaluate
     public string? TitleAr { get; private set; }
     public string? DescriptionEn { get; private set; }
     public string? DescriptionAr { get; private set; }
-    public Guid LevelId { get; private set; }
-    public Level? Level { get; private set; }
     public Guid? JobFamilyId { get; private set; }     // nullable: job works before families exist
     public JobFamily? JobFamily { get; private set; }
     public Guid? GradeId { get; private set; }          // nullable: set once graded
-    public Grade? Grade { get; private set; }
+    public Grade? Grade { get; private set; }           // level flows transitively via Grade.LevelId
     public GradeSource? GradeSource { get; private set; }   // null until graded; moves WITH GradeId
     public JobStatus Status { get; private set; } = JobStatus.Draft;
 
     private Job() { }   // EF
 
-    public static Job Create(string code, string titleEn, string? titleAr, Guid levelId,
+    public static Job Create(string code, string titleEn, string? titleAr,
                              string? descriptionEn, string? descriptionAr, Guid? jobFamilyId) =>
         new()
         {
-            Code = code, TitleEn = titleEn, TitleAr = titleAr, LevelId = levelId,
+            Code = code, TitleEn = titleEn, TitleAr = titleAr,
             DescriptionEn = descriptionEn, DescriptionAr = descriptionAr, JobFamilyId = jobFamilyId,
         };
 
-    public void Update(string code, string titleEn, string? titleAr, Guid levelId,
+    public void Update(string code, string titleEn, string? titleAr,
                        string? descriptionEn, string? descriptionAr, Guid? jobFamilyId)
-    { Code = code; TitleEn = titleEn; TitleAr = titleAr; LevelId = levelId;
+    { Code = code; TitleEn = titleEn; TitleAr = titleAr;
       DescriptionEn = descriptionEn; DescriptionAr = descriptionAr; JobFamilyId = jobFamilyId; }
 
     /// <summary>The ONLY way a job gets/changes a grade. Both the evaluation flow and the direct-assign

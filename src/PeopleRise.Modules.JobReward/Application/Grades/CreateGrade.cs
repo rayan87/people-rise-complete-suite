@@ -7,7 +7,7 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Grades;
 
-public sealed record CreateGradeCommand(string Code, string NameEn, string? NameAr, int Rank, Guid? LevelId = null);
+public sealed record CreateGradeCommand(string Code, string NameEn, string? NameAr, int Rank, Guid LevelId);
 
 internal sealed class CreateGradeHandler(JobRewardDbContext db)
     : ICommandHandler<CreateGradeCommand, Result<GradeDto>>
@@ -19,7 +19,7 @@ internal sealed class CreateGradeHandler(JobRewardDbContext db)
             return Error.Validation("English name is required.");
         }
 
-        if (cmd.LevelId is { } lid && !await db.Levels.AnyAsync(l => l.Id == lid, ct))
+        if (!await db.Levels.AnyAsync(l => l.Id == cmd.LevelId, ct))
         {
             return Error.NotFound("Level not found.");
         }

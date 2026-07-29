@@ -18,12 +18,12 @@ export class Api {
 
   // structure
   levels() { return this.get<Level[]>('/levels'); }
-  createLevel(b: { code: string; nameEn: string; nameAr: string | null; rank: number; inEvalScope: boolean }) { return this.post<Level>('/levels', b); }
-  updateLevel(id: string, b: { code: string; nameEn: string; nameAr: string | null; rank: number; inEvalScope: boolean }) { return this.put<Level>(`/levels/${id}`, b); }
+  createLevel(b: { code: string; nameEn: string; nameAr: string | null; rank: number }) { return this.post<Level>('/levels', b); }
+  updateLevel(id: string, b: { code: string; nameEn: string; nameAr: string | null; rank: number }) { return this.put<Level>(`/levels/${id}`, b); }
   deleteLevel(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/levels/${id}`)); }
   grades() { return this.get<Grade[]>('/grades'); }
-  createGrade(b: { code: string; nameEn: string; nameAr: string | null; rank: number; levelId: string | null }) { return this.post<Grade>('/grades', b); }
-  updateGrade(id: string, b: { code: string; nameEn: string; nameAr: string | null; rank: number; levelId: string | null }) { return this.put<Grade>(`/grades/${id}`, b); }
+  createGrade(b: { code: string; nameEn: string; nameAr: string | null; rank: number; levelId: string }) { return this.post<Grade>('/grades', b); }
+  updateGrade(id: string, b: { code: string; nameEn: string; nameAr: string | null; rank: number; levelId: string }) { return this.put<Grade>(`/grades/${id}`, b); }
   deleteGrade(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/grades/${id}`)); }
   families() { return this.get<JobFamily[]>('/job-families'); }
   createFamily(b: { code: string; nameEn: string; nameAr: string | null }) { return this.post<JobFamily>('/job-families', b); }
@@ -32,8 +32,8 @@ export class Api {
 
   jobs() { return this.get<Job[]>('/jobs'); }
   job(id: string) { return this.get<Job>(`/jobs/${id}`); }
-  createJob(b: { code: string; titleEn: string; titleAr: string | null; levelId: string; descriptionEn: string | null; descriptionAr: string | null; jobFamilyId: string | null }) { return this.post<Job>('/jobs', b); }
-  updateJob(id: string, b: { code: string; titleEn: string; titleAr: string | null; levelId: string; descriptionEn: string | null; descriptionAr: string | null; jobFamilyId: string | null }) { return this.put<Job>(`/jobs/${id}`, b); }
+  createJob(b: { code: string; titleEn: string; titleAr: string | null; descriptionEn: string | null; descriptionAr: string | null; jobFamilyId: string | null }) { return this.post<Job>('/jobs', b); }
+  updateJob(id: string, b: { code: string; titleEn: string; titleAr: string | null; descriptionEn: string | null; descriptionAr: string | null; jobFamilyId: string | null }) { return this.put<Job>(`/jobs/${id}`, b); }
   deleteJob(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/jobs/${id}`)); }
   assignGrade(id: string, gradeId: string) { return this.post<Job>(`/jobs/${id}/grade`, { gradeId }); }
 

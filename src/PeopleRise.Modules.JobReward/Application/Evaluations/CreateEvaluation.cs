@@ -14,20 +14,13 @@ internal sealed class CreateEvaluationHandler(JobRewardDbContext db)
 {
     public async Task<Result<EvaluationCreatedDto>> Handle(CreateEvaluationCommand cmd, CancellationToken ct)
     {
-        var job = await db.Jobs
-            .Include(j => j.Level)
-            .FirstOrDefaultAsync(j => j.Id == cmd.JobId, ct);
+        var job = await db.Jobs.FirstOrDefaultAsync(j => j.Id == cmd.JobId, ct);
 
         if (job is null)
         {
             return Error.NotFound("Job not found.");
         }
 
-        if (job.Level!.InEvalScope == false)
-        {
-            return Error.Validation($"Job's level '{job.Level.Code}' is out of evaluation scope (e.g. C-level).");
-        }
-            
         var version = await db.MethodologyVersions
             .FirstOrDefaultAsync(v => v.Id == cmd.MethodologyVersionId, ct);
 

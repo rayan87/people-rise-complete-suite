@@ -49,7 +49,6 @@ create table level (
     code            text not null unique,
     name            text not null,
     rank            int  not null unique,                 -- 1..5, vertical order
-    in_eval_scope   boolean not null default true,        -- C-level = false
     created_at      timestamptz not null default now(),
     updated_at      timestamptz not null default now()
 );
@@ -70,22 +69,22 @@ create table grade (
     code        text not null unique,
     name        text not null,
     rank        int  not null unique,
-    level_id    uuid references level(id),                -- optional grouping into a level
+    level_id    uuid not null references level(id),       -- grouping into a level
     created_at  timestamptz not null default now(),
     updated_at  timestamptz not null default now()
 );
 
 -- JOB = a role DEFINITION ("Senior Accountant"). This is what gets evaluated.
---   * level_id: which of the 5 levels (required).
+--   * level: NOT stored directly — it flows transitively via grade_id -> grade.level_id.
+--     A job has no resolvable level until it is graded (evaluated or manually assigned).
 --   * job_family_id: NULLABLE — a job is fully usable before families exist;
 --     it just isn't placed on the horizontal axis yet.
---   * grade_id: NULLABLE — assigned once an evaluation is approved.
+--   * grade_id: NULLABLE — assigned once an evaluation is approved (or set manually).
 create table job (
     id              uuid primary key default gen_random_uuid(),
     code            text not null unique,
     title           text not null,
     description     text,
-    level_id        uuid not null references level(id),
     job_family_id   uuid references job_family(id),       -- nullable: add later
     grade_id        uuid references grade(id),            -- nullable: set post-eval
     status          text not null default 'draft'
@@ -93,7 +92,6 @@ create table job (
     created_at      timestamptz not null default now(),
     updated_at      timestamptz not null default now()
 );
-create index ix_job_level   on job(level_id);
 create index ix_job_family  on job(job_family_id);
 create index ix_job_grade   on job(grade_id);
 

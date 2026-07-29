@@ -15,9 +15,9 @@ internal sealed class GetJobHandler(JobRewardDbContext db)
     {
         var dto = await db.Jobs.Where(j => j.Id == query.Id).Select(j => new JobDto(
             j.Id, j.Code, j.TitleEn, j.TitleAr, j.DescriptionEn, j.DescriptionAr,
-            j.LevelId, j.Level!.Code, j.Level.NameEn, j.Level.NameAr,
             j.JobFamilyId, j.JobFamily!.Code, j.JobFamily.NameEn, j.JobFamily.NameAr,
             j.GradeId, j.Grade!.Code, j.Grade.NameEn, j.Grade.NameAr,
+            j.Grade!.LevelId, j.Grade.Level!.Code, j.Grade.Level.NameEn, j.Grade.Level.NameAr,
             j.Status.ToString(),
             j.GradeSource == null ? null : j.GradeSource.ToString(),
             db.SalaryBands.Where(b => b.GradeId == j.GradeId && b.JobFamilyId == null)

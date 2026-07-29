@@ -6,7 +6,7 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Levels;
 
-public sealed record CreateLevelCommand(string Code, string NameEn, string? NameAr, int Rank, bool InEvalScope = true);
+public sealed record CreateLevelCommand(string Code, string NameEn, string? NameAr, int Rank);
 
 internal sealed class CreateLevelHandler(JobRewardDbContext db)
     : ICommandHandler<CreateLevelCommand, Result<LevelDto>>
@@ -18,11 +18,11 @@ internal sealed class CreateLevelHandler(JobRewardDbContext db)
             return Error.Validation("English name is required.");
         }
 
-        var level = Level.Create(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank, cmd.InEvalScope);
+        var level = Level.Create(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank);
 
         db.Levels.Add(level);
         await db.SaveChangesAsync(ct);
-        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank, level.InEvalScope);
+        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank);
     }
 }
 

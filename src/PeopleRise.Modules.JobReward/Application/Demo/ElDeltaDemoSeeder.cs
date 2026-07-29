@@ -22,16 +22,16 @@ internal static class ElDeltaDemoSeeder
 
     public static async Task<DemoSeedSummary> SeedAsync(JobRewardDbContext db, CancellationToken ct = default)
     {
-        // ---- Levels (El-Delta's five; C-level is out of evaluation scope) ----
-        var levelDefs = new (string Code, string En, string Ar, int Rank, bool Scope)[]
+        // ---- Levels (El-Delta's five; C-level is not run through the evaluation questionnaire) ----
+        var levelDefs = new (string Code, string En, string Ar, int Rank)[]
         {
-            ("BC",   "Blue Collar",            "ياقة زرقاء", 1, true),
-            ("IC",   "Individual Contributor", "فرد مساهم",  2, true),
-            ("SUP",  "Supervisory",            "إشرافي",     3, true),
-            ("MGR",  "Managerial",             "إداري",      4, true),
-            ("EXEC", "C-Level",                "تنفيذي",     5, false),
+            ("BC",   "Blue Collar",            "ياقة زرقاء", 1),
+            ("IC",   "Individual Contributor", "فرد مساهم",  2),
+            ("SUP",  "Supervisory",            "إشرافي",     3),
+            ("MGR",  "Managerial",             "إداري",      4),
+            ("EXEC", "C-Level",                "تنفيذي",     5),
         };
-        var levels = levelDefs.ToDictionary(d => d.Code, d => Level.Create(d.Code, d.En, d.Ar, d.Rank, d.Scope));
+        var levels = levelDefs.ToDictionary(d => d.Code, d => Level.Create(d.Code, d.En, d.Ar, d.Rank));
         db.Levels.AddRange(levels.Values);
 
         // ---- Job families ----
@@ -368,51 +368,54 @@ internal static class ElDeltaDemoSeeder
 
         version.Publish();
 
-        // ---- Jobs (bilingual titles) ----
-        var jobDefs = new (string Code, string En, string Ar, string Level, string Family)[]
+        // ---- Jobs (bilingual titles). The comment column documents each job's intended level for
+        // readers of this seed data; level itself is no longer stored on Job - it flows transitively
+        // via Job.Grade.LevelId once the job is graded (see the evaluations/grade-assignment below). ----
+        // BC=Blue Collar, IC=Individual Contributor, SUP=Supervisory, MGR=Managerial, EXEC=C-Level
+        var jobDefs = new (string Code, string En, string Ar, string Family)[]
         {
-            ("ENG-SE1", "Junior Software Engineer", "مهندس برمجيات مبتدئ", "IC", "ENG"),
-            ("ENG-SE2", "Software Engineer", "مهندس برمجيات", "IC", "ENG"),
-            ("ENG-SE3", "Senior Software Engineer", "مهندس برمجيات أول", "IC", "ENG"),
-            ("ENG-TL",  "Tech Lead", "قائد تقني", "SUP", "ENG"),
-            ("ENG-EM",  "Engineering Manager", "مدير هندسة", "MGR", "ENG"),
-            ("QA-1",    "QA Engineer", "مهندس ضمان جودة", "IC", "QA"),
-            ("QA-2",    "Senior QA Engineer", "مهندس ضمان جودة أول", "IC", "QA"),
-            ("QA-L",    "QA Lead", "قائد ضمان الجودة", "SUP", "QA"),
-            ("OPS-1",   "DevOps Engineer", "مهندس عمليات", "IC", "DEVOPS"),
-            ("OPS-2",   "Senior DevOps Engineer", "مهندس عمليات أول", "IC", "DEVOPS"),
-            ("OPS-L",   "Infrastructure Lead", "قائد البنية التحتية", "SUP", "DEVOPS"),
-            ("OPS-M",   "Infrastructure Manager", "مدير البنية التحتية", "MGR", "DEVOPS"),
-            ("DAT-AN",  "Data Analyst", "محلل بيانات", "IC", "DATA"),
-            ("DAT-DE",  "Data Engineer", "مهندس بيانات", "IC", "DATA"),
-            ("DAT-SE",  "Senior Data Engineer", "مهندس بيانات أول", "IC", "DATA"),
-            ("DAT-L",   "Data & Analytics Lead", "قائد البيانات والتحليلات", "SUP", "DATA"),
-            ("PRD-DS",  "Product Designer", "مصمم منتج", "IC", "PROD"),
-            ("PRD-PM",  "Product Manager", "مدير منتج", "SUP", "PROD"),
-            ("PRD-SPM", "Senior Product Manager", "مدير منتج أول", "MGR", "PROD"),
-            ("SEC-1",   "Security Engineer", "مهندس أمن معلومات", "IC", "SEC"),
-            ("SEC-L",   "Security Lead", "قائد أمن المعلومات", "SUP", "SEC"),
-            ("SUP-1",   "IT Support Specialist", "أخصائي دعم فني", "BC", "ITSUP"),
-            ("SUP-2",   "Senior IT Support Specialist", "أخصائي دعم فني أول", "IC", "ITSUP"),
-            ("SUP-S",   "IT Support Supervisor", "مشرف دعم فني", "SUP", "ITSUP"),
-            ("PMO-C",   "Project Coordinator", "منسق مشاريع", "IC", "PMO"),
-            ("PMO-PM",  "Project Manager", "مدير مشروع", "SUP", "PMO"),
-            ("PMO-L",   "PMO Lead", "قائد مكتب إدارة المشاريع", "MGR", "PMO"),
-            ("HR-1",    "HR Specialist", "أخصائي موارد بشرية", "IC", "HR"),
-            ("HR-M",    "HR Manager", "مدير موارد بشرية", "MGR", "HR"),
-            ("FIN-1",   "Accountant", "محاسب", "IC", "FIN"),
-            ("FIN-2",   "Senior Accountant", "محاسب أول", "IC", "FIN"),
-            ("FIN-M",   "Finance Manager", "مدير مالي", "MGR", "FIN"),
-            ("SAL-1",   "Sales Executive", "تنفيذي مبيعات", "IC", "SAL"),
-            ("SAL-AM",  "Account Manager", "مدير حسابات", "SUP", "SAL"),
-            ("SAL-M",   "Sales Manager", "مدير مبيعات", "MGR", "SAL"),
-            ("ADM-1",   "Office Administrator", "مسؤول إداري", "BC", "ADM"),
-            ("ADM-S",   "Admin Supervisor", "مشرف إداري", "SUP", "ADM"),
-            ("EXE-CTO", "Chief Technology Officer", "الرئيس التنفيذي للتقنية", "EXEC", "ENG"),
-            ("EXE-CEO", "Chief Executive Officer", "الرئيس التنفيذي", "EXEC", "ADM"),
+            ("ENG-SE1", "Junior Software Engineer", "مهندس برمجيات مبتدئ", "ENG"),          // IC
+            ("ENG-SE2", "Software Engineer", "مهندس برمجيات", "ENG"),                      // IC
+            ("ENG-SE3", "Senior Software Engineer", "مهندس برمجيات أول", "ENG"),           // IC
+            ("ENG-TL",  "Tech Lead", "قائد تقني", "ENG"),                                  // SUP
+            ("ENG-EM",  "Engineering Manager", "مدير هندسة", "ENG"),                       // MGR
+            ("QA-1",    "QA Engineer", "مهندس ضمان جودة", "QA"),                           // IC
+            ("QA-2",    "Senior QA Engineer", "مهندس ضمان جودة أول", "QA"),                // IC
+            ("QA-L",    "QA Lead", "قائد ضمان الجودة", "QA"),                              // SUP
+            ("OPS-1",   "DevOps Engineer", "مهندس عمليات", "DEVOPS"),                      // IC
+            ("OPS-2",   "Senior DevOps Engineer", "مهندس عمليات أول", "DEVOPS"),           // IC
+            ("OPS-L",   "Infrastructure Lead", "قائد البنية التحتية", "DEVOPS"),           // SUP
+            ("OPS-M",   "Infrastructure Manager", "مدير البنية التحتية", "DEVOPS"),        // MGR
+            ("DAT-AN",  "Data Analyst", "محلل بيانات", "DATA"),                            // IC
+            ("DAT-DE",  "Data Engineer", "مهندس بيانات", "DATA"),                          // IC
+            ("DAT-SE",  "Senior Data Engineer", "مهندس بيانات أول", "DATA"),               // IC
+            ("DAT-L",   "Data & Analytics Lead", "قائد البيانات والتحليلات", "DATA"),      // SUP
+            ("PRD-DS",  "Product Designer", "مصمم منتج", "PROD"),                          // IC
+            ("PRD-PM",  "Product Manager", "مدير منتج", "PROD"),                           // SUP
+            ("PRD-SPM", "Senior Product Manager", "مدير منتج أول", "PROD"),                // MGR
+            ("SEC-1",   "Security Engineer", "مهندس أمن معلومات", "SEC"),                  // IC
+            ("SEC-L",   "Security Lead", "قائد أمن المعلومات", "SEC"),                     // SUP
+            ("SUP-1",   "IT Support Specialist", "أخصائي دعم فني", "ITSUP"),               // BC
+            ("SUP-2",   "Senior IT Support Specialist", "أخصائي دعم فني أول", "ITSUP"),    // IC
+            ("SUP-S",   "IT Support Supervisor", "مشرف دعم فني", "ITSUP"),                 // SUP
+            ("PMO-C",   "Project Coordinator", "منسق مشاريع", "PMO"),                      // IC
+            ("PMO-PM",  "Project Manager", "مدير مشروع", "PMO"),                           // SUP
+            ("PMO-L",   "PMO Lead", "قائد مكتب إدارة المشاريع", "PMO"),                    // MGR
+            ("HR-1",    "HR Specialist", "أخصائي موارد بشرية", "HR"),                      // IC
+            ("HR-M",    "HR Manager", "مدير موارد بشرية", "HR"),                           // MGR
+            ("FIN-1",   "Accountant", "محاسب", "FIN"),                                     // IC
+            ("FIN-2",   "Senior Accountant", "محاسب أول", "FIN"),                          // IC
+            ("FIN-M",   "Finance Manager", "مدير مالي", "FIN"),                            // MGR
+            ("SAL-1",   "Sales Executive", "تنفيذي مبيعات", "SAL"),                        // IC
+            ("SAL-AM",  "Account Manager", "مدير حسابات", "SAL"),                          // SUP
+            ("SAL-M",   "Sales Manager", "مدير مبيعات", "SAL"),                            // MGR
+            ("ADM-1",   "Office Administrator", "مسؤول إداري", "ADM"),                     // BC
+            ("ADM-S",   "Admin Supervisor", "مشرف إداري", "ADM"),                          // SUP
+            ("EXE-CTO", "Chief Technology Officer", "الرئيس التنفيذي للتقنية", "ENG"),     // EXEC
+            ("EXE-CEO", "Chief Executive Officer", "الرئيس التنفيذي", "ADM"),              // EXEC
         };
         var jobs = jobDefs.ToDictionary(
-            d => d.Code, d => Job.Create(d.Code, d.En, d.Ar, levels[d.Level].Id, null, null, families[d.Family].Id));
+            d => d.Code, d => Job.Create(d.Code, d.En, d.Ar, null, null, families[d.Family].Id));
         db.Jobs.AddRange(jobs.Values);
 
         // ---- Evaluations (representative jobs scored through the real workflow) ----

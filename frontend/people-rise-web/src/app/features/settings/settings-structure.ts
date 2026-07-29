@@ -73,7 +73,7 @@ type PanelType = 'level' | 'grade' | 'family';
               <table>
                 <thead>
                   <tr>
-                    <th>Rank</th><th>Code</th><th>Name</th><th>Eval scope</th><th></th>
+                    <th>Rank</th><th>Code</th><th>Name</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -82,10 +82,6 @@ type PanelType = 'level' | 'grade' | 'family';
                       <td class="faint">{{ l.rank }}</td>
                       <td>{{ l.code }}</td>
                       <td>{{ i18n.name(l.nameEn, l.nameAr) }}</td>
-                      <td>
-                        @if (l.inEvalScope) { <span class="badge approved">Yes</span> }
-                        @else { <span class="badge draft">No</span> }
-                      </td>
                       <td>
                         <div class="act">
                           <button class="sm subtle" (click)="openEdit('level', l.id)"><i class="ti ti-pencil"></i></button>
@@ -184,18 +180,9 @@ type PanelType = 'level' | 'grade' | 'family';
                 <label>{{ i18n.t('common.nameAr') }} <span class="optional">({{ i18n.t('common.optional') }})</span></label>
                 <input [(ngModel)]="levelForm.nameAr" dir="rtl" />
               </div>
-              <div class="row">
-                <div class="field">
-                  <label>{{ i18n.t('field.rank') }}</label>
-                  <input type="number" [(ngModel)]="levelForm.rank" min="1" />
-                </div>
-                <div class="field">
-                  <label>{{ i18n.t('field.inScope') }}</label>
-                  <select [(ngModel)]="levelForm.inEvalScope">
-                    <option [ngValue]="true">Yes</option>
-                    <option [ngValue]="false">No</option>
-                  </select>
-                </div>
+              <div class="field">
+                <label>{{ i18n.t('field.rank') }}</label>
+                <input type="number" [(ngModel)]="levelForm.rank" min="1" />
               </div>
             }
 
@@ -227,9 +214,9 @@ type PanelType = 'level' | 'grade' | 'family';
                   <input type="number" [(ngModel)]="gradeForm.rank" min="1" />
                 </div>
                 <div class="field">
-                  <label>{{ i18n.t('field.level') }} <span class="optional">({{ i18n.t('common.optional') }})</span></label>
+                  <label>{{ i18n.t('field.level') }}</label>
                   <select [(ngModel)]="gradeForm.levelId">
-                    <option [ngValue]="null">—</option>
+                    <option [ngValue]="''" disabled>—</option>
                     @for (l of levels(); track l.id) {
                       <option [ngValue]="l.id">{{ l.code }} — {{ i18n.name(l.nameEn, l.nameAr) }}</option>
                     }
@@ -265,8 +252,8 @@ export class SettingsStructure {
   readonly panel   = signal<PanelType | null>(null);
   readonly editingId = signal<string | null>(null);
 
-  levelForm  = { code: '', nameEn: '', nameAr: '', rank: 1, inEvalScope: true };
-  gradeForm  = { code: '', nameEn: '', nameAr: '', rank: 1, levelId: null as string | null };
+  levelForm  = { code: '', nameEn: '', nameAr: '', rank: 1 };
+  gradeForm  = { code: '', nameEn: '', nameAr: '', rank: 1, levelId: '' };
   familyForm = { code: '', nameEn: '', nameAr: '' };
 
   readonly panelTitle = computed(() => {
@@ -292,8 +279,8 @@ export class SettingsStructure {
   openNew(type: PanelType) {
     this.panelError.set(null);
     this.editingId.set(null);
-    if (type === 'level')  this.levelForm  = { code: '', nameEn: '', nameAr: '', rank: 1, inEvalScope: true };
-    if (type === 'grade')  this.gradeForm  = { code: '', nameEn: '', nameAr: '', rank: 1, levelId: null };
+    if (type === 'level')  this.levelForm  = { code: '', nameEn: '', nameAr: '', rank: 1 };
+    if (type === 'grade')  this.gradeForm  = { code: '', nameEn: '', nameAr: '', rank: 1, levelId: '' };
     if (type === 'family') this.familyForm = { code: '', nameEn: '', nameAr: '' };
     this.panel.set(type);
   }
@@ -303,7 +290,7 @@ export class SettingsStructure {
     this.editingId.set(id);
     if (type === 'level') {
       const l = this.levels().find(x => x.id === id)!;
-      this.levelForm = { code: l.code, nameEn: l.nameEn, nameAr: l.nameAr ?? '', rank: l.rank, inEvalScope: l.inEvalScope };
+      this.levelForm = { code: l.code, nameEn: l.nameEn, nameAr: l.nameAr ?? '', rank: l.rank };
     }
     if (type === 'grade') {
       const g = this.grades().find(x => x.id === id)!;
@@ -321,7 +308,7 @@ export class SettingsStructure {
   canSave(): boolean {
     const p = this.panel();
     if (p === 'level')  return !!this.levelForm.code  && !!this.levelForm.nameEn;
-    if (p === 'grade')  return !!this.gradeForm.code  && !!this.gradeForm.nameEn;
+    if (p === 'grade')  return !!this.gradeForm.code  && !!this.gradeForm.nameEn && !!this.gradeForm.levelId;
     if (p === 'family') return !!this.familyForm.code && !!this.familyForm.nameEn;
     return false;
   }
@@ -332,7 +319,7 @@ export class SettingsStructure {
     try {
       const p = this.panel();
       if (p === 'level') {
-        const b = { code: this.levelForm.code, nameEn: this.levelForm.nameEn, nameAr: this.levelForm.nameAr || null, rank: this.levelForm.rank, inEvalScope: this.levelForm.inEvalScope };
+        const b = { code: this.levelForm.code, nameEn: this.levelForm.nameEn, nameAr: this.levelForm.nameAr || null, rank: this.levelForm.rank };
         if (id) await this.api.updateLevel(id, b); else await this.api.createLevel(b);
       } else if (p === 'grade') {
         const b = { code: this.gradeForm.code, nameEn: this.gradeForm.nameEn, nameAr: this.gradeForm.nameAr || null, rank: this.gradeForm.rank, levelId: this.gradeForm.levelId };

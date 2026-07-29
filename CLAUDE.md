@@ -16,13 +16,13 @@ Pipeline: a job comes in, a defensible salary band comes out. Everything down to
 **design-time and needs no employee data** — that is what lets it sell as a consulting engagement.
 
 First customer / pilot: **El-Delta** (five levels: Blue Collar → IC → Supervisory → Managerial →
-C-level; C-level is out of evaluation scope).
+C-level; C-level is conventionally not run through the evaluation questionnaire — see LOCKED RULES).
 
 ## Tech stack
 
 - Backend: **.NET 10**, **Minimal API**, C#
 - ORM/DB: **EF Core 10 + Npgsql**, **PostgreSQL**
-- Frontend: **Angular** (not in this repo yet; backend first)
+- Frontend: **Angular**, at `frontend/people-rise-web` (standalone components, signals, no NgModules)
 - Solution file: `PeopleRise.slnx` (XML solution format)
 
 ## Solution structure (modular monolith)
@@ -99,14 +99,24 @@ These are architectural decisions, not preferences. Breaking them is a bug.
 9. **Compute scores server-side.** Never trust a client-submitted total or grade.
 10. **Keep queries provider-agnostic** (EF Core LINQ, no raw Postgres-only SQL in hot paths) — SQL Server
     is a real future requirement for government/SOE RFPs. Postgres-specific DDL is fine in migrations.
+11. **`Job` has no direct `LevelId`.** Level flows transitively via `Job.Grade.LevelId` (`Grade.LevelId`
+    is required — every grade belongs to exactly one level). A job's level is therefore unresolvable
+    (`null` in DTOs) until the job has a `GradeId` — i.e. **a job isn't part of the organization's graded
+    population until it's been graded**, whether via an approved evaluation or a direct manual assignment
+    (`Job.AssignGrade`). This is intentional, not a gap: don't add a `LevelId` back onto `Job`, and don't
+    add validation that requires a level before a job can be created or evaluated. There is also no
+    system-enforced eligibility gate blocking evaluation of any particular level (e.g. C-level) — keeping
+    jobs like that out of the questionnaire is a consultant/process decision, not something the code
+    checks.
 
 ## Domain model — key concepts
 
 - **Job vs Position vs Employee** are distinct. A *Job* is a role definition (you evaluate it). A
   *Position* (`JobPosition`) is a seat the establishment counts (status `ApprovedVacant` = the "open
   box"). An *Employee* is a person (you pay them). Never collapse these.
-- **Job families are nullable** on `Job` and assigned in the design phase. A job needs only a *level* to
-  be evaluated; family can come later. No feature may assume family is set.
+- **Job families are nullable** on `Job` and assigned in the design phase. A job needs neither family nor
+  level to be evaluated — level itself only becomes resolvable once the job is graded (see LOCKED RULES).
+  No feature may assume family is set.
 - **Audit trail**: `EvaluationAnswer` rows (immutable, with `PointsSnapshot`) are the record of why a
   job got its grade. This traceability is the product in a consulting sale.
 - **Standalone vs integrated**: each product works alone and gets richer with siblings present. Own your
