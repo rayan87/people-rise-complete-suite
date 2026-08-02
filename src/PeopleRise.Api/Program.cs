@@ -147,7 +147,7 @@ app.MapGet("/admin/migrate-dbs", async (ControlPlaneDbContext controlPlaneDb,
     {
         var dbConnection = connectionFactory.ForDatabase(tenant.DbName);
 
-        await JobRewardModule.EnsureSchemaAsync(dbConnection);
+        await JobRewardModule.MigrateAsync(dbConnection);
     }
 
     return Results.Ok($"{tenants.Count} dbs have been migrated.");

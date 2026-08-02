@@ -45,6 +45,18 @@ public static class JobRewardModule
         await dbContext.Database.EnsureCreatedAsync();
     }
 
+    /// <summary>Creates the Phase 1 schema in a freshly provisioned tenant database.
+    /// Dev convenience via EnsureCreated; switch to migrations for production (see README).</summary>
+    public static async Task MigrateAsync(string connectionString)
+    {
+        var options = new DbContextOptionsBuilder<JobRewardDbContext>()
+            .UseNpgsql(connectionString)
+            .Options;
+
+        await using var dbContext = new JobRewardDbContext(options);
+        await dbContext.Database.MigrateAsync();
+    }
+
     /// <summary>Populates a freshly-provisioned tenant DB with the El-Delta demo dataset. No request
     /// context, so it builds its own DbContext from the connection string (like EnsureSchemaAsync).</summary>
     public static async Task<DemoSeedSummary> SeedElDeltaDemoAsync(string connectionString)
