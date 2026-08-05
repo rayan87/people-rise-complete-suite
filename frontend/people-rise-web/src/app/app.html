@@ -30,7 +30,7 @@
       </button>
     </div>
 
-    <nav class="nav" aria-label="Main navigation">
+    <nav class="nav" [attr.aria-label]="i18n.t('app.mainNav')">
 
       <a class="nav-item" routerLink="/dashboard" routerLinkActive="active"
          [routerLinkActiveOptions]="{exact: true}">
@@ -49,7 +49,7 @@
         <i class="ti ti-clipboard-list" aria-hidden="true"></i>
         <span>{{ i18n.t('nav.evaluation') }}</span>
         @if (pendingCount() > 0) {
-          <span class="nav-badge" [attr.aria-label]="pendingCount() + ' pending'">{{ pendingCount() }}</span>
+          <span class="nav-badge" [attr.aria-label]="pendingCount() + ' ' + i18n.t('common.pending')">{{ pendingCount() }}</span>
         }
       </a>
 
@@ -88,11 +88,11 @@
       <div class="user-row">
         <div class="user-avatar" aria-hidden="true">{{ userInitials() }}</div>
         <div class="user-info">
-          <div class="user-name">Dev User</div>
-          <div class="user-role">Consultant</div>
+          <div class="user-name">{{ i18n.t('app.devUser') }}</div>
+          <div class="user-role">{{ i18n.t('app.roleConsultant') }}</div>
         </div>
         <button class="icon subtle" (click)="theme.toggle()"
-                [attr.aria-label]="theme.theme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
+                [attr.aria-label]="theme.theme() === 'light' ? i18n.t('theme.toDark') : i18n.t('theme.toLight')">
           <i [class]="theme.theme() === 'light' ? 'ti ti-moon' : 'ti ti-sun'" aria-hidden="true"></i>
         </button>
       </div>
@@ -107,7 +107,7 @@
       </div>
       <div class="topbar-right">
         <!-- Language -->
-        <div class="lang-toggle" role="group" aria-label="Language">
+        <div class="lang-toggle" role="group" [attr.aria-label]="i18n.t('settings.language')">
           <button [class.on]="i18n.lang() === 'en'" (click)="i18n.set('en')">EN</button>
           <button [class.on]="i18n.lang() === 'ar'" (click)="i18n.set('ar')">ع</button>
         </div>
@@ -132,7 +132,7 @@
       <div class="toast toast-{{ t.kind }}" role="alert">
         <span>{{ t.text }}</span>
         <button class="toast-dismiss" (click)="toast.dismiss(t.id)"
-                [attr.aria-label]="'Dismiss notification'">
+                [attr.aria-label]="i18n.t('app.dismissNotification')">
           <i class="ti ti-x" aria-hidden="true"></i>
         </button>
       </div>

@@ -49,7 +49,7 @@ import { Methodology } from '../../core/models';
   template: `
     <a routerLink="/methodology" class="faint"
        style="font-size:.82rem; display:inline-flex; align-items:center; gap:4px; margin-bottom:.75rem">
-      <i class="ti ti-arrow-left" style="font-size:12px"></i> Methodologies
+      <i class="ti ti-arrow-left" style="font-size:12px"></i> {{ i18n.t('nav.methodology') }}
     </a>
 
     @if (error()) { <div class="alert error">{{ error() }}</div> }
@@ -68,7 +68,7 @@ import { Methodology } from '../../core/models';
               {{ methodology()?.code }}
               @if (methodology()?.versions?.length) {
                 · {{ methodology()!.versions.length }}
-                version{{ methodology()!.versions.length !== 1 ? 's' : '' }}
+                {{ methodology()!.versions.length !== 1 ? i18n.t('eval.versions') : i18n.t('eval.version') }}
               }
             </div>
           } @else {
@@ -84,15 +84,15 @@ import { Methodology } from '../../core/models';
                 <input [(ngModel)]="editForm.nameAr" dir="rtl" />
               </div>
               <div style="align-self:flex-end; display:flex; gap:.5rem">
-                <button (click)="saveEdit()" [disabled]="saving()">Save</button>
-                <button class="subtle" (click)="editMode.set(false)">Cancel</button>
+                <button (click)="saveEdit()" [disabled]="saving()">{{ i18n.t('common.save') }}</button>
+                <button class="subtle" (click)="editMode.set(false)">{{ i18n.t('common.cancel') }}</button>
               </div>
             </div>
           }
         </div>
         @if (!editMode()) {
           <button class="subtle sm" (click)="editMode.set(true)">
-            <i class="ti ti-pencil"></i> Edit name
+            <i class="ti ti-pencil"></i> {{ i18n.t('action.editName') }}
           </button>
         }
       </div>
@@ -100,16 +100,22 @@ import { Methodology } from '../../core/models';
 
     <!-- Version history -->
     <div class="sec-head">
-      <span class="sec-title">Version history</span>
-      <button class="sm" (click)="newVersion()" [disabled]="saving()">
-        <i class="ti ti-plus"></i> New draft version
-      </button>
+      <span class="sec-title">{{ i18n.t('eval.versionHistory') }}</span>
+      <div style="display:flex; gap:.5rem; align-items:center">
+        <button class="sm subtle" (click)="fileInput.click()" [disabled]="saving() || importing()">
+          <i class="ti ti-upload"></i> {{ i18n.t('eval.importVersion') }}
+        </button>
+        <input #fileInput type="file" accept=".xlsx" style="display:none" (change)="onImportFile($event)" />
+        <button class="sm" (click)="newVersion()" [disabled]="saving()">
+          <i class="ti ti-plus"></i> {{ i18n.t('eval.newVersion') }}
+        </button>
+      </div>
     </div>
 
     @if (loading()) {
       <p class="muted">{{ i18n.t('common.loading') }}</p>
     } @else if (!methodology()?.versions?.length) {
-      <p class="empty">No versions yet. Create the first draft version.</p>
+      <p class="empty">{{ i18n.t('empty.versions') }}</p>
     } @else {
       @for (v of methodology()!.versions; track v.id) {
         <div class="ver-card"
@@ -123,7 +129,7 @@ import { Methodology } from '../../core/models';
           </div>
           <div style="flex:1; min-width:0">
             <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:3px">
-              <span class="badge {{ v.status.toLowerCase() }}">{{ v.status }}</span>
+              <span class="badge {{ v.status.toLowerCase() }}">{{ i18n.status(v.status) }}</span>
               @if (v.publishedAt) {
                 <span style="font-size:.78rem; color:var(--text-faint)">
                   {{ v.publishedAt | date:'d MMM yyyy' }}
@@ -133,21 +139,21 @@ import { Methodology } from '../../core/models';
             @if (v.note) {
               <div style="font-size:.82rem; color:var(--text-muted)">{{ v.note }}</div>
             } @else {
-              <div style="font-size:.82rem; color:var(--text-faint)">No notes</div>
+              <div style="font-size:.82rem; color:var(--text-faint)">{{ i18n.t('common.noNotes') }}</div>
             }
           </div>
           <div style="display:flex; gap:.5rem; align-items:center">
             @if (v.status === 'Draft') {
               <a [routerLink]="['/methodology/versions', v.id]">
-                <button class="sm"><i class="ti ti-edit"></i> Open editor</button>
+                <button class="sm"><i class="ti ti-edit"></i> {{ i18n.t('eval.openEditor') }}</button>
               </a>
               <button class="sm danger icon" (click)="deleteVersion(v.id, v.versionNo)"
-                      [disabled]="saving()" title="Delete version">
+                      [disabled]="saving()" [title]="i18n.t('action.deleteVersion')">
                 <i class="ti ti-trash"></i>
               </button>
             } @else {
               <a [routerLink]="['/methodology/versions', v.id]">
-                <button class="sm subtle"><i class="ti ti-eye"></i> View</button>
+                <button class="sm subtle"><i class="ti ti-eye"></i> {{ i18n.t('common.view') }}</button>
               </a>
             }
           </div>
@@ -169,6 +175,7 @@ export class MethodologyDetail {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly editMode = signal(false);
+  readonly importing = signal(false);
   editForm = { nameEn: '', nameAr: '' };
 
   constructor() {
@@ -185,7 +192,7 @@ export class MethodologyDetail {
       const m = list.find(x => x.id === id) ?? null;
       this.methodology.set(m);
       if (m) this.editForm = { nameEn: m.nameEn, nameAr: m.nameAr ?? '' };
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadGeneric')); }
     finally { this.loading.set(false); }
   }
 
@@ -198,26 +205,44 @@ export class MethodologyDetail {
       this.editMode.set(false);
       this.toast.success(this.i18n.t('toast.saved'));
       await this.load(m.id);
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to save.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.saveGeneric')); }
     finally { this.saving.set(false); }
   }
 
   async deleteVersion(id: string, versionNo: number) {
     const ok = await this.cs.confirm({
-      title: `Delete draft version v${versionNo}?`,
-      body: 'This will permanently remove the version and all its factors, questions, and grade mappings.',
-      confirmLabel: 'Delete',
+      title: `${this.i18n.t('confirm.deleteVersionPrefix')} v${versionNo}${this.i18n.t('common.qMark')}`,
+      body: this.i18n.t('confirm.version.body'),
+      confirmLabel: this.i18n.t('confirm.delete'),
       danger: true,
     });
     if (!ok) return;
     this.saving.set(true);
     try {
       await this.api.deleteVersion(id);
-      this.toast.success('Version deleted.');
+      this.toast.success(this.i18n.t('toast.versionDeleted'));
       const m = this.methodology();
       if (m) await this.load(m.id);
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to delete version.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.deleteVersion')); }
     finally { this.saving.set(false); }
+  }
+
+  async onImportFile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    const m = this.methodology();
+    if (!file || !m) return;
+    this.importing.set(true); this.error.set(null);
+    try {
+      const detail = await this.api.importVersion(m.id, file, null);
+      this.toast.success(this.i18n.t('toast.imported'));
+      this.router.navigate(['/methodology/versions', detail.id]);
+    } catch (e: any) {
+      this.toast.error(e?.error?.detail ?? this.i18n.t('err.importVersion'));
+    } finally {
+      this.importing.set(false);
+    }
   }
 
   async newVersion() {
@@ -228,7 +253,7 @@ export class MethodologyDetail {
       const v = await this.api.createVersion(m.id, { note: null });
       this.router.navigate(['/methodology/versions', v.id]);
     } catch (e: any) {
-      this.error.set(e?.error?.detail ?? 'Failed to create version.');
+      this.error.set(e?.error?.detail ?? this.i18n.t('err.createVersion'));
       this.saving.set(false);
     }
   }

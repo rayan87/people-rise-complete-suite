@@ -36,8 +36,8 @@ import { Job, Level, JobFamily } from '../../core/models';
 
     @if (ungradedCount() > 0) {
       <div class="alert info" style="margin-bottom:1rem">
-        {{ ungradedCount() }} job(s) aren't graded yet, so they have no level and don't appear in this grid.
-        See <strong>{{ i18n.t('nav.jobs') }}</strong> for the full list.
+        {{ ungradedCount() }} {{ i18n.t('grading.ungradedSuffix') }}
+        {{ i18n.t('grading.seePrefix') }} <strong>{{ i18n.t('nav.jobs') }}</strong> {{ i18n.t('grading.forFullListSuffix') }}
       </div>
     }
 
@@ -45,7 +45,7 @@ import { Job, Level, JobFamily } from '../../core/models';
       @if (loading()) {
         <p class="muted">{{ i18n.t('common.loading') }}</p>
       } @else if (matrixLevels().length === 0) {
-        <p class="empty">No levels yet. Add levels in <strong>Configuration → Levels, Families &amp; Grades</strong>.</p>
+        <p class="empty">{{ i18n.t('grading.noLevelsYet') }} <strong>{{ i18n.t('nav.groupConfig') }} → {{ i18n.t('nav.taxonomy') }}</strong>.</p>
       } @else {
         <div class="matrix-wrap">
           <table class="matrix">
@@ -56,7 +56,7 @@ import { Job, Level, JobFamily } from '../../core/models';
                   <th>{{ i18n.name(f.nameEn, f.nameAr) }}</th>
                 }
                 @if (hasUnassigned()) {
-                  <th class="unassigned">Unassigned</th>
+                  <th class="unassigned">{{ i18n.t('grading.unassigned') }}</th>
                 }
               </tr>
             </thead>
@@ -154,7 +154,7 @@ export class Grading {
     try {
       const [j, l, f] = await Promise.all([this.api.jobs(), this.api.levels(), this.api.families()]);
       this.jobs.set(j); this.levels.set(l); this.families.set(f);
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load grading structure.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadGradingStructure')); }
     finally { this.loading.set(false); }
   }
 }

@@ -35,10 +35,10 @@ import { Methodology } from '../../core/models';
   `],
   template: `
     <div class="head">
-      <div><h1>Methodologies</h1></div>
+      <div><h1>{{ i18n.t('nav.methodology') }}</h1></div>
       <div class="spacer"></div>
       <button (click)="showForm.set(!showForm())">
-        {{ showForm() ? i18n.t('common.cancel') : '+ New methodology' }}
+        {{ showForm() ? i18n.t('common.cancel') : '+ ' + i18n.t('eval.newMethodology') }}
       </button>
     </div>
 
@@ -47,7 +47,7 @@ import { Methodology } from '../../core/models';
 
     @if (showForm()) {
       <div class="card">
-        <h2>New methodology</h2>
+        <h2>{{ i18n.t('eval.newMethodology') }}</h2>
         <div class="row">
           <div class="field">
             <label>{{ i18n.t('common.code') }}</label>
@@ -74,24 +74,24 @@ import { Methodology } from '../../core/models';
       @if (loading()) {
         <p class="muted">{{ i18n.t('common.loading') }}</p>
       } @else if (methodologies().length === 0) {
-        <p class="empty">No methodologies yet. Create one to get started.</p>
+        <p class="empty">{{ i18n.t('empty.methodologies') }}</p>
       } @else {
         @for (m of methodologies(); track m.id) {
           <a class="mcard" [routerLink]="['/methodology', m.id]">
             <div class="mcard-body">
               <div class="mcard-name">{{ i18n.name(m.nameEn, m.nameAr) }}</div>
-              <div class="mcard-meta">{{ m.code }} · {{ m.versions.length }} version{{ m.versions.length !== 1 ? 's' : '' }}</div>
+              <div class="mcard-meta">{{ m.code }} · {{ m.versions.length }} {{ m.versions.length !== 1 ? i18n.t('eval.versions') : i18n.t('eval.version') }}</div>
               @if (m.versions.length > 0) {
                 <div class="version-chips">
                   @for (v of m.versions; track v.id) {
-                    <span class="ver-chip {{ v.status.toLowerCase() }}">v{{ v.versionNo }} · {{ v.status }}</span>
+                    <span class="ver-chip {{ v.status.toLowerCase() }}">v{{ v.versionNo }} · {{ i18n.status(v.status) }}</span>
                   }
                 </div>
               }
             </div>
             <i class="ti ti-chevron-right mcard-arrow"></i>
             @if (canDelete(m)) {
-              <button class="sm danger icon mcard-del" (click)="onDelete(m, $event)" [disabled]="saving()" title="Delete methodology">
+              <button class="sm danger icon mcard-del" (click)="onDelete(m, $event)" [disabled]="saving()" [title]="i18n.t('action.deleteMethodology')">
                 <i class="ti ti-trash"></i>
               </button>
             }
@@ -120,7 +120,7 @@ export class MethodologyList {
     if (!this.session.hasTenant()) { this.methodologies.set([]); return; }
     this.loading.set(true); this.error.set(null);
     try { this.methodologies.set(await this.api.methodologies()); }
-    catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load methodologies.'); }
+    catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadMethodologies')); }
     finally { this.loading.set(false); }
   }
 
@@ -131,18 +131,18 @@ export class MethodologyList {
   async onDelete(m: Methodology, e: Event) {
     e.preventDefault(); e.stopPropagation();
     const ok = await this.cs.confirm({
-      title: `Delete "${this.i18n.name(m.nameEn, m.nameAr)}"?`,
-      body: 'This will permanently remove the methodology and all its draft versions.',
-      confirmLabel: 'Delete',
+      title: `${this.i18n.t('confirm.deleteNamedTitle')} "${this.i18n.name(m.nameEn, m.nameAr)}"${this.i18n.t('common.qMark')}`,
+      body: this.i18n.t('confirm.methodology.body'),
+      confirmLabel: this.i18n.t('confirm.delete'),
       danger: true,
     });
     if (!ok) return;
     this.saving.set(true);
     try {
       await this.api.deleteMethodology(m.id);
-      this.toast.success('Methodology deleted.');
+      this.toast.success(this.i18n.t('toast.methodologyDeleted'));
       await this.load();
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to delete methodology.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.deleteMethodology')); }
     finally { this.saving.set(false); }
   }
 
@@ -153,7 +153,7 @@ export class MethodologyList {
       this.nm = { code: '', nameEn: '', nameAr: '' };
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to create methodology.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.createMethodology')); }
     finally { this.saving.set(false); }
   }
 }

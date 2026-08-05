@@ -43,6 +43,20 @@ export class Api {
   updateMethodology(id: string, b: { nameEn: string; nameAr: string | null }) { return this.put<Methodology>(`/methodologies/${id}`, b); }
   deleteMethodology(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodologies/${id}`)); }
   createVersion(mid: string, b: { note: string | null; minPoints?: number; maxPoints?: number }) { return this.post<MethodologyVersion>(`/methodologies/${mid}/versions`, b); }
+  importVersion(mid: string, file: File, note: string | null) {
+    const form = new FormData();
+    form.append('file', file);
+    if (note) form.append('note', note);
+    return this.post<MethodologyVersionDetail>(`/methodologies/${mid}/versions/import`, form);
+  }
+  async exportVersion(id: string, fileName: string): Promise<void> {
+    const blob = await firstValueFrom(this.http.get(`${API_BASE}/methodology-versions/${id}/export`, { responseType: 'blob' }));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   version(id: string) { return this.get<MethodologyVersionDetail>(`/methodology-versions/${id}`); }
   publishVersion(id: string) { return this.post<MethodologyVersion>(`/methodology-versions/${id}/publish`, {}); }
   deleteVersion(id: string) { return firstValueFrom(this.http.delete(`${API_BASE}/methodology-versions/${id}`)); }

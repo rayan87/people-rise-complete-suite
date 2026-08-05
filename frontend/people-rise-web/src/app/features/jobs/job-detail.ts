@@ -32,7 +32,7 @@ import { Job, EvaluationListItem, Grade } from '../../core/models';
         @if (j.jobFamilyCode) { <span class="chip">{{ i18n.t('field.family') }}: {{ i18n.name(j.jobFamilyNameEn, j.jobFamilyNameAr) }}</span> }
         <span class="chip {{ j.gradeCode ? 'good' : '' }}">{{ i18n.t('field.grade') }}: {{ j.gradeCode ?? '—' }}</span>
         @if (j.gradeSource) { <span class="chip">{{ i18n.t('job.provenance.' + j.gradeSource.toLowerCase()) }}</span> }
-        <span class="badge {{ j.status.toLowerCase() }}">{{ j.status }}</span>
+        <span class="badge {{ j.status.toLowerCase() }}">{{ i18n.status(j.status) }}</span>
       </div>
 
       @if (showGradeModal()) {
@@ -79,7 +79,7 @@ import { Job, EvaluationListItem, Grade } from '../../core/models';
               <tbody>
                 @for (e of evals(); track e.id) {
                   <tr>
-                    <td><span class="badge {{ e.status.toLowerCase() }}">{{ e.status }}</span></td>
+                    <td><span class="badge {{ e.status.toLowerCase() }}">{{ i18n.status(e.status) }}</span></td>
                     <td>{{ e.totalScore ?? '—' }}</td>
                     <td>{{ e.recommendedGradeCode ?? '—' }}</td>
                     <td><a [routerLink]="['/evaluation', e.id]">{{ i18n.t('common.open') }} →</a></td>
@@ -134,7 +134,7 @@ export class JobDetail {
       this.job.set(job);
       this.evals.set(evals.filter((e) => e.jobId === this.id));
       this.grades.set(grades);
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load job.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadJob')); }
   }
 
   async confirmSetGrade(jobId: string) {
@@ -143,6 +143,6 @@ export class JobDetail {
       this.job.set(await this.api.assignGrade(jobId, this.modalGradeId));
       this.showGradeModal.set(false);
       this.toast.success(this.i18n.t('toast.saved'));
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to set grade.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.setGrade')); }
   }
 }

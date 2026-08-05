@@ -136,7 +136,7 @@ import {
             <div style="font-size:.82rem; color:var(--text-faint); margin-top:2px">{{ ver.note }}</div>
           }
           <div style="margin-top:.35rem">
-            <span class="badge {{ ver.status.toLowerCase() }}">{{ ver.status }}</span>
+            <span class="badge {{ ver.status.toLowerCase() }}">{{ i18n.status(ver.status) }}</span>
           </div>
 
           @if (editingBudget()) {
@@ -159,8 +159,11 @@ import {
           }
         </div>
         <div class="spacer"></div>
+        <button class="subtle" (click)="exportVersion()">
+          <i class="ti ti-download"></i> {{ i18n.t('eval.export') }}
+        </button>
         @if (isDraft()) {
-          <button (click)="publish()">
+          <button (click)="publish()" [disabled]="!canPublish()">
             <i class="ti ti-send"></i> {{ i18n.t('eval.publish') }}
           </button>
         }
@@ -170,6 +173,13 @@ import {
         <div class="alert info" style="margin-bottom:1rem">{{ i18n.t('eval.draftHint') }}</div>
       } @else {
         <div class="alert info" style="margin-bottom:1rem">{{ i18n.t('eval.readonly') }}</div>
+      }
+
+      @if (isDraft() && publishBlockers().length > 0) {
+        <div class="alert error" style="margin-bottom:1rem">
+          <div style="font-weight:500; margin-bottom:.3rem">{{ i18n.t('eval.notReadyToPublish') }}</div>
+          @for (b of publishBlockers(); track b) { <div>• {{ b }}</div> }
+        </div>
       }
 
       <!-- Factors -->
@@ -207,8 +217,8 @@ import {
                 <div class="subject-help">{{ i18n.name(f.helpTextEn, f.helpTextAr) }}</div>
               }
               <div style="font-size:.75rem; color:var(--text-faint); margin-top:1px">
-                {{ f.questions.length }} question{{ f.questions.length !== 1 ? 's' : '' }}
-                · order #{{ f.sortOrder }}
+                {{ f.questions.length }} {{ f.questions.length !== 1 ? i18n.t('eval.questionPlural') : i18n.t('eval.questionSingular') }}
+                · {{ i18n.t('eval.orderHash') }}{{ f.sortOrder }}
               </div>
             </div>
             @if (isDraft()) {
@@ -346,7 +356,7 @@ import {
           @if (editId() === gm.id) {
             <div style="padding:.5rem 0; border-bottom:1px solid var(--border)">
               <div style="font-size:.72rem; font-weight:500; color:var(--primary); margin-bottom:.3rem">
-                Editing — {{ gm.gradeCode }}
+                {{ i18n.t('common.editingPrefix') }} {{ gm.gradeCode }}
               </div>
               <div style="display:flex; gap:.4rem; align-items:center; flex-wrap:wrap">
                 <select [(ngModel)]="egm.gradeId" style="width:auto">
@@ -354,9 +364,9 @@ import {
                     <option [ngValue]="g.id">{{ g.code }}</option>
                   }
                 </select>
-                <span style="font-size:.8rem; color:var(--text-muted)">Min</span>
+                <span style="font-size:.8rem; color:var(--text-muted)">{{ i18n.t('salary.min') }}</span>
                 <input type="number" [(ngModel)]="egm.minScore" style="max-width:72px" />
-                <span style="font-size:.8rem; color:var(--text-muted)">Max</span>
+                <span style="font-size:.8rem; color:var(--text-muted)">{{ i18n.t('salary.max') }}</span>
                 <input type="number" [(ngModel)]="egm.maxScore" style="max-width:72px" />
                 <button class="sm" (click)="saveMapping(ver, gm)">{{ i18n.t('common.save') }}</button>
                 <button class="sm subtle" (click)="editId.set(null)">{{ i18n.t('common.cancel') }}</button>
@@ -368,9 +378,9 @@ import {
                 {{ i18n.t('eval.setRange') }} — {{ gm.gradeCode }}
               </div>
               <div style="display:flex; gap:.4rem; align-items:center; flex-wrap:wrap">
-                <span style="font-size:.8rem; color:var(--text-muted)">Min</span>
+                <span style="font-size:.8rem; color:var(--text-muted)">{{ i18n.t('salary.min') }}</span>
                 <input type="number" [(ngModel)]="erange.minScore" style="max-width:72px" />
-                <span style="font-size:.8rem; color:var(--text-muted)">Max</span>
+                <span style="font-size:.8rem; color:var(--text-muted)">{{ i18n.t('salary.max') }}</span>
                 <input type="number" [(ngModel)]="erange.maxScore" style="max-width:72px" />
                 <button class="sm" (click)="saveRange(ver, gm)">{{ i18n.t('common.save') }}</button>
                 <button class="sm subtle" (click)="rangingId.set(null)">{{ i18n.t('common.cancel') }}</button>
@@ -652,6 +662,36 @@ export class VersionEditor {
     return warnings;
   });
 
+  // Mirrors MethodologyVersion.Publish()'s exact preconditions (backend is still the enforcer - this
+  // only stops the user from hitting an avoidable server rejection).
+  readonly publishBlockers = computed((): string[] => {
+    const ver = this.v();
+    if (!ver) return [];
+    const blockers: string[] = [];
+    if (ver.factors.length === 0) {
+      blockers.push(this.i18n.t('eval.blockNoFactors'));
+    } else {
+      if (!this.factorWeightValid()) {
+        blockers.push(`${this.i18n.t('eval.factorWeightWarn')} (${this.factorWeightSum()}%)`);
+      }
+      for (const f of ver.factors) {
+        if (f.questions.length === 0) {
+          blockers.push(`${f.code}: ${this.i18n.t('eval.blockFactorNoQuestions')}`);
+        } else if (!this.questionWeightValid(f)) {
+          blockers.push(`${f.code}: ${this.i18n.t('eval.questionWeightWarn')} (${this.questionWeightSum(f)}%)`);
+        }
+      }
+    }
+    if (ver.gradeMappings.length === 0) {
+      blockers.push(this.i18n.t('eval.blockNoGradeMappings'));
+    } else if (ver.gradeMappings.some((g) => g.minScore === null || g.maxScore === null)) {
+      blockers.push(this.i18n.t('eval.blockUnrangedMapping'));
+    }
+    return blockers;
+  });
+
+  readonly canPublish = computed(() => this.publishBlockers().length === 0);
+
   readonly mappingRange = computed(() => {
     const mappings = rangedOnly(this.v()?.gradeMappings ?? []);
     if (!mappings.length) return null;
@@ -695,10 +735,10 @@ export class VersionEditor {
       if (isFirstLoad) {
         this.expandedIds.set(new Set(ver.factors.map(f => f.id)));
       }
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load version.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadVersion')); }
   }
 
-  private fail(e: any) { this.toast.error(e?.error?.detail ?? 'Request failed.'); }
+  private fail(e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.generic')); }
 
   startPointBudget(ver: MethodologyVersionDetail) {
     this.epb = { minPoints: ver.minPoints, maxPoints: ver.maxPoints };
@@ -828,8 +868,8 @@ export class VersionEditor {
 
   async deleteFactor(ver: MethodologyVersionDetail, f: FactorDetail) {
     const ok = await this.cs.confirm({
-      title: `Delete factor "${this.i18n.name(f.nameEn, f.nameAr)}"?`,
-      body: 'This will also delete all its questions and answer options.',
+      title: `${this.i18n.t('confirm.deleteFactorPrefix')} "${this.i18n.name(f.nameEn, f.nameAr)}"${this.i18n.t('common.qMark')}`,
+      body: this.i18n.t('confirm.factor.body'),
       confirmLabel: this.i18n.t('confirm.delete'),
       danger: true,
     });
@@ -843,7 +883,7 @@ export class VersionEditor {
 
   async deleteQuestion(f: FactorDetail, q: QuestionDetail) {
     const ok = await this.cs.confirm({
-      title: 'Delete question?',
+      title: this.i18n.t('confirm.question.title'),
       body: this.i18n.name(q.questionTextEn, q.questionTextAr) ?? undefined,
       confirmLabel: this.i18n.t('confirm.delete'),
       danger: true,
@@ -858,7 +898,7 @@ export class VersionEditor {
 
   async deleteOption(q: QuestionDetail, o: AnswerOption) {
     const ok = await this.cs.confirm({
-      title: `Delete option "${this.i18n.name(o.labelEn, o.labelAr)}"?`,
+      title: `${this.i18n.t('confirm.deleteOptionPrefix')} "${this.i18n.name(o.labelEn, o.labelAr)}"${this.i18n.t('common.qMark')}`,
       confirmLabel: this.i18n.t('confirm.delete'),
       danger: true,
     });
@@ -929,7 +969,7 @@ export class VersionEditor {
 
   async deleteMapping(ver: MethodologyVersionDetail, gm: GradeMapping) {
     const ok = await this.cs.confirm({
-      title: `Delete grade mapping for ${gm.gradeCode ?? gm.gradeId}?`,
+      title: `${this.i18n.t('confirm.deleteMappingPrefix')} ${gm.gradeCode ?? gm.gradeId}${this.i18n.t('common.qMark')}`,
       confirmLabel: this.i18n.t('confirm.delete'),
       danger: true,
     });
@@ -941,7 +981,16 @@ export class VersionEditor {
     } catch (e) { this.fail(e); }
   }
 
+  async exportVersion() {
+    const ver = this.v();
+    if (!ver) return;
+    try {
+      await this.api.exportVersion(ver.id, `${ver.methodologyCode}-v${ver.versionNo}.xlsx`);
+    } catch (e) { this.fail(e); }
+  }
+
   async publish() {
+    if (!this.canPublish()) return;
     const ok = await this.cs.confirm({
       title: this.i18n.t('confirm.publish.title'),
       body: this.i18n.t('confirm.publish.body'),

@@ -16,11 +16,20 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
       <div class="head" style="margin-top:.5rem">
         <div>
           <h1>{{ i18n.name(ev.jobTitleEn, ev.jobTitleAr) }} <span class="faint">{{ ev.jobCode }}</span></h1>
-          <p><span class="badge {{ ev.status.toLowerCase() }}">{{ ev.status }}</span></p>
+          <p><span class="badge {{ ev.status.toLowerCase() }}">{{ i18n.status(ev.status) }}</span></p>
         </div>
         <div class="spacer"></div>
         @if (ev.status === 'Submitted') { <button (click)="approve()" [disabled]="busy()">{{ i18n.t('eval.approve') }}</button> }
       </div>
+
+      @if (ev.status === 'Superseded') {
+        <div class="alert info" style="margin-bottom:1rem">
+          {{ i18n.t('eval.supersededNotice') }}
+          @if (currentApprovedId(); as cid) {
+            <a [routerLink]="['/evaluation', cid]">{{ i18n.t('eval.viewCurrent') }} →</a>
+          }
+        </div>
+      }
 
       @if (ev.status === 'Draft') {
         @if (version(); as ver) {
@@ -34,7 +43,10 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
                 }
                 @for (q of f.questions; track q.id) {
                   <div class="question">
-                    <div class="q-text">{{ i18n.name(q.questionTextEn, q.questionTextAr) }}</div>
+                    <div class="q-text">
+                      {{ i18n.name(q.questionTextEn, q.questionTextAr) }}
+                      <span class="req-tag">{{ q.isRequired ? i18n.t('eval.required') : i18n.t('eval.optional') }}</span>
+                    </div>
                     @if (q.helpTextEn || q.helpTextAr) {
                       <div class="help-text">{{ i18n.name(q.helpTextEn, q.helpTextAr) }}</div>
                     }
@@ -70,8 +82,13 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
               </div>
             }
             <div class="submit-bar">
-              <span class="muted">{{ answeredCount() }} / {{ totalQuestions() }} {{ i18n.t('eval.answered') }}</span>
-              <button (click)="submit()" [disabled]="!allAnswered() || busy()">{{ i18n.t('eval.submit') }}</button>
+              <span class="muted">
+                {{ answeredCount() }} / {{ totalQuestions() }} {{ i18n.t('eval.answered') }}
+                @if (requiredRemaining() > 0) {
+                  · {{ requiredRemaining() }} {{ i18n.t('eval.requiredRemaining') }}
+                }
+              </span>
+              <button (click)="submit()" [disabled]="!canSubmit() || busy()">{{ i18n.t('eval.submit') }}</button>
             </div>
           </div>
         } @else if (!error()) { <p>{{ i18n.t('common.loading') }}</p> }
@@ -126,6 +143,10 @@ import { EvaluationResult, MethodologyVersionDetail, AnswerSelection } from '../
     .factor { margin-bottom:1.25rem; }
     .question { background:var(--surface-2); border-radius:8px; padding:.7rem .9rem; margin:.5rem 0; }
     .q-text { font-weight:600; }
+    .req-tag {
+      font-size:.68rem; font-weight:400; padding:2px 6px; border-radius:4px;
+      background:var(--surface-2); color:var(--text-faint); margin-inline-start:6px; vertical-align:middle;
+    }
     .help-text { font-size:.82rem; color:var(--text-faint); font-weight:400; line-height:1.4; margin-top:2px; }
     .opts { display:flex; flex-direction:column; gap:.35rem; margin-top:.4rem; }
     .opt { display:flex; align-items:flex-start; gap:.5rem; font-weight:400; color:var(--text); cursor:pointer; }
@@ -161,10 +182,17 @@ export class EvaluationDetail {
   readonly selections = signal<Record<string, string[]>>({});
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
+  readonly currentApprovedId = signal<string | null>(null);
 
   readonly totalQuestions = computed(() => (this.version()?.factors ?? []).reduce((n, f) => n + f.questions.length, 0));
   readonly answeredCount = computed(() => Object.values(this.selections()).filter((ids) => ids.length > 0).length);
-  readonly allAnswered = computed(() => this.totalQuestions() > 0 && this.answeredCount() === this.totalQuestions());
+  // Only required questions gate submission - unanswered optional questions are allowed through, and
+  // the backend redistributes their points across sibling questions in the same factor (ScoringService).
+  readonly requiredQuestionIds = computed(() =>
+    (this.version()?.factors ?? []).flatMap((f) => f.questions).filter((q) => q.isRequired).map((q) => q.id));
+  readonly requiredRemaining = computed(() =>
+    this.requiredQuestionIds().filter((id) => (this.selections()[id] ?? []).length === 0).length);
+  readonly canSubmit = computed(() => this.requiredRemaining() === 0 && this.answeredCount() > 0);
 
   private get id() { return this.route.snapshot.paramMap.get('id')!; }
   constructor() { this.load(); }
@@ -175,7 +203,12 @@ export class EvaluationDetail {
       const ev = await this.api.evaluation(this.id);
       this.evaluation.set(ev);
       if (ev.status === 'Draft') this.version.set(await this.api.version(ev.methodologyVersionId));
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load evaluation.'); }
+      if (ev.status === 'Superseded') {
+        const all = await this.api.evaluations();
+        const current = all.find((e) => e.jobId === ev.jobId && e.status === 'Approved');
+        this.currentApprovedId.set(current?.id ?? null);
+      }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadEvaluation')); }
   }
 
   answersFor(ev: EvaluationResult, factorId: string) { return ev.answers.filter((a) => a.factorId === factorId); }
@@ -191,7 +224,7 @@ export class EvaluationDetail {
   }
 
   async submit() {
-    if (!this.allAnswered()) return;
+    if (!this.canSubmit()) return;
     this.busy.set(true); this.error.set(null);
     try {
       const answers: AnswerSelection[] = Object.entries(this.selections())
@@ -199,7 +232,7 @@ export class EvaluationDetail {
         .map(([questionId, answerOptionIds]) => ({ questionId, answerOptionIds }));
       this.evaluation.set(await this.api.submitAnswers(this.id, answers));
       this.toast.success(this.i18n.t('toast.submitted'));
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to submit.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.submitAnswers')); }
     finally { this.busy.set(false); }
   }
 
@@ -208,7 +241,7 @@ export class EvaluationDetail {
     try {
       this.evaluation.set(await this.api.approve(this.id));
       this.toast.success(this.i18n.t('toast.approved'));
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to approve.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.approve')); }
     finally { this.busy.set(false); }
   }
 }

@@ -142,15 +142,22 @@ app.MapGet("/admin/migrate-dbs", async (ControlPlaneDbContext controlPlaneDb,
     TenantConnectionFactory connectionFactory) =>
 {
     var tenants = await controlPlaneDb.Tenants.ToListAsync();
+    var results = new List<object>();
 
     foreach (var tenant in tenants)
     {
-        var dbConnection = connectionFactory.ForDatabase(tenant.DbName);
-
-        await JobRewardModule.MigrateAsync(dbConnection);
+        try
+        {
+            await JobRewardModule.EnsureSchemaAsync(connectionFactory.ForDatabase(tenant.DbName));
+            results.Add(new { tenant.Name, tenant.DbName, success = true, error = (string?)null });
+        }
+        catch (Exception ex)
+        {
+            results.Add(new { tenant.Name, tenant.DbName, success = false, error = ex.Message });
+        }
     }
 
-    return Results.Ok($"{tenants.Count} dbs have been migrated.");
+    return Results.Ok(results);
 });
 
 app.MapJobRewardEndpoints();

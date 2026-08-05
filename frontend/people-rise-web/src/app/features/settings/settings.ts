@@ -56,9 +56,9 @@ export class Settings {
       const r = await this.api.seedElDelta();
       await this.session.loadTenants();
       this.session.setTenant(r.id);
-      this.toast.success('El-Delta demo client ready — selected as active client.');
+      this.toast.success(this.i18n.t('toast.demoReady'));
     } catch (e: any) {
-      this.error.set(e?.error?.detail ?? 'Failed to seed demo data.');
+      this.error.set(e?.error?.detail ?? this.i18n.t('err.seedDemo'));
     } finally { this.busy.set(false); }
   }
 }

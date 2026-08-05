@@ -38,8 +38,8 @@ type PanelType = 'level' | 'grade' | 'family';
   template: `
     <div class="head">
       <div>
-        <div class="faint" style="font-size:.82rem">Settings</div>
-        <h1>Structure</h1>
+        <div class="faint" style="font-size:.82rem">{{ i18n.t('settings.title') }}</div>
+        <h1>{{ i18n.t('settings.structureTitle') }}</h1>
       </div>
     </div>
 
@@ -49,13 +49,13 @@ type PanelType = 'level' | 'grade' | 'family';
     <div class="card">
       <div class="tabs">
         <button class="tab" [class.active]="tab() === 'levels'" (click)="switchTab('levels')">
-          Levels <span class="faint">({{ levels().length }})</span>
+          {{ i18n.t('tab.levels') }} <span class="faint">({{ levels().length }})</span>
         </button>
         <button class="tab" [class.active]="tab() === 'families'" (click)="switchTab('families')">
-          Job families <span class="faint">({{ families().length }})</span>
+          {{ i18n.t('tab.families') }} <span class="faint">({{ families().length }})</span>
         </button>
         <button class="tab" [class.active]="tab() === 'grades'" (click)="switchTab('grades')">
-          Grades <span class="faint">({{ grades().length }})</span>
+          {{ i18n.t('dash.grades') }} <span class="faint">({{ grades().length }})</span>
         </button>
       </div>
 
@@ -64,16 +64,16 @@ type PanelType = 'level' | 'grade' | 'family';
 
           @if (tab() === 'levels') {
             <div class="list-head">
-              <h2>Levels</h2>
-              <button class="sm" (click)="openNew('level')"><i class="ti ti-plus"></i> Add level</button>
+              <h2>{{ i18n.t('tab.levels') }}</h2>
+              <button class="sm" (click)="openNew('level')"><i class="ti ti-plus"></i> {{ i18n.t('action.addLevel') }}</button>
             </div>
             @if (levels().length === 0) {
-              <p class="empty">No levels yet.</p>
+              <p class="empty">{{ i18n.t('empty.levels') }}</p>
             } @else {
               <table>
                 <thead>
                   <tr>
-                    <th>Rank</th><th>Code</th><th>Name</th><th></th>
+                    <th>{{ i18n.t('field.rank') }}</th><th>{{ i18n.t('common.code') }}</th><th>{{ i18n.t('common.name') }}</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -97,15 +97,15 @@ type PanelType = 'level' | 'grade' | 'family';
 
           @if (tab() === 'families') {
             <div class="list-head">
-              <h2>Job families</h2>
-              <button class="sm" (click)="openNew('family')"><i class="ti ti-plus"></i> Add family</button>
+              <h2>{{ i18n.t('tab.families') }}</h2>
+              <button class="sm" (click)="openNew('family')"><i class="ti ti-plus"></i> {{ i18n.t('action.addFamily') }}</button>
             </div>
             @if (families().length === 0) {
-              <p class="empty">No job families yet.</p>
+              <p class="empty">{{ i18n.t('empty.families') }}</p>
             } @else {
               <table>
                 <thead>
-                  <tr><th>Code</th><th>Name</th><th></th></tr>
+                  <tr><th>{{ i18n.t('common.code') }}</th><th>{{ i18n.t('common.name') }}</th><th></th></tr>
                 </thead>
                 <tbody>
                   @for (f of families(); track f.id) {
@@ -127,15 +127,15 @@ type PanelType = 'level' | 'grade' | 'family';
 
           @if (tab() === 'grades') {
             <div class="list-head">
-              <h2>Grades</h2>
-              <button class="sm" (click)="openNew('grade')"><i class="ti ti-plus"></i> Add grade</button>
+              <h2>{{ i18n.t('dash.grades') }}</h2>
+              <button class="sm" (click)="openNew('grade')"><i class="ti ti-plus"></i> {{ i18n.t('action.addGrade') }}</button>
             </div>
             @if (grades().length === 0) {
-              <p class="empty">No grades yet.</p>
+              <p class="empty">{{ i18n.t('empty.grades') }}</p>
             } @else {
               <table>
                 <thead>
-                  <tr><th>Rank</th><th>Code</th><th>Name</th><th>Level</th><th></th></tr>
+                  <tr><th>{{ i18n.t('field.rank') }}</th><th>{{ i18n.t('common.code') }}</th><th>{{ i18n.t('common.name') }}</th><th>{{ i18n.t('field.level') }}</th><th></th></tr>
                 </thead>
                 <tbody>
                   @for (g of grades(); track g.id) {
@@ -171,7 +171,7 @@ type PanelType = 'level' | 'grade' | 'family';
             }
 
             @if (panel() === 'level') {
-              <div class="field"><label>Code</label><input [(ngModel)]="levelForm.code" placeholder="IC" /></div>
+              <div class="field"><label>{{ i18n.t('common.code') }}</label><input [(ngModel)]="levelForm.code" placeholder="IC" /></div>
               <div class="field">
                 <label>{{ i18n.t('common.nameEn') }}</label>
                 <input [(ngModel)]="levelForm.nameEn" />
@@ -187,7 +187,7 @@ type PanelType = 'level' | 'grade' | 'family';
             }
 
             @if (panel() === 'family') {
-              <div class="field"><label>Code</label><input [(ngModel)]="familyForm.code" placeholder="ENG" /></div>
+              <div class="field"><label>{{ i18n.t('common.code') }}</label><input [(ngModel)]="familyForm.code" placeholder="ENG" /></div>
               <div class="field">
                 <label>{{ i18n.t('common.nameEn') }}</label>
                 <input [(ngModel)]="familyForm.nameEn" />
@@ -199,7 +199,7 @@ type PanelType = 'level' | 'grade' | 'family';
             }
 
             @if (panel() === 'grade') {
-              <div class="field"><label>Code</label><input [(ngModel)]="gradeForm.code" placeholder="G8" /></div>
+              <div class="field"><label>{{ i18n.t('common.code') }}</label><input [(ngModel)]="gradeForm.code" placeholder="G8" /></div>
               <div class="field">
                 <label>{{ i18n.t('common.nameEn') }}</label>
                 <input [(ngModel)]="gradeForm.nameEn" />
@@ -259,8 +259,9 @@ export class SettingsStructure {
   readonly panelTitle = computed(() => {
     const p = this.panel();
     if (!p) return '';
-    const name = p === 'level' ? 'level' : p === 'grade' ? 'grade' : 'family';
-    return this.editingId() ? `Edit ${name}` : `New ${name}`;
+    const capitalized = p === 'level' ? 'Level' : p === 'grade' ? 'Grade' : 'Family';
+    const key = (this.editingId() ? 'panel.edit' : 'panel.new') + capitalized;
+    return this.i18n.t(key);
   });
 
   constructor() { effect(() => { this.session.tenantId(); this.load(); }); }
@@ -271,7 +272,7 @@ export class SettingsStructure {
     try {
       const [l, g, f] = await Promise.all([this.api.levels(), this.api.grades(), this.api.families()]);
       this.levels.set(l); this.grades.set(g); this.families.set(f);
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadGeneric')); }
   }
 
   switchTab(t: Tab) { this.tab.set(t); this.closePanel(); }
@@ -330,28 +331,28 @@ export class SettingsStructure {
       }
       this.closePanel();
       await this.load();
-    } catch (e: any) { this.panelError.set(e?.error?.detail ?? 'Failed to save.'); }
+    } catch (e: any) { this.panelError.set(e?.error?.detail ?? this.i18n.t('err.saveGeneric')); }
     finally { this.saving.set(false); }
   }
 
   async deleteLevel(id: string) {
-    if (!confirm('Delete this level?')) return;
+    if (!confirm(this.i18n.t('confirm.deleteLevel.title'))) return;
     this.error.set(null);
     try { await this.api.deleteLevel(id); await this.load(); }
-    catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to delete level.'); }
+    catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.deleteLevel')); }
   }
 
   async deleteGrade(id: string) {
-    if (!confirm('Delete this grade?')) return;
+    if (!confirm(this.i18n.t('confirm.deleteGrade.title'))) return;
     this.error.set(null);
     try { await this.api.deleteGrade(id); await this.load(); }
-    catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to delete grade.'); }
+    catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.deleteGradeStructure')); }
   }
 
   async deleteFamily(id: string) {
-    if (!confirm('Delete this family?')) return;
+    if (!confirm(this.i18n.t('confirm.deleteFamily.title'))) return;
     this.error.set(null);
     try { await this.api.deleteFamily(id); await this.load(); }
-    catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to delete family.'); }
+    catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.deleteFamily')); }
   }
 }

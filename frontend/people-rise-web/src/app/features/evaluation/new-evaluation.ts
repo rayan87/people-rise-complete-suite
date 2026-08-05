@@ -66,7 +66,7 @@ export class NewEvaluation {
         for (const v of m.versions)
           if (v.status === 'Active') active.push({ versionId: v.id, label: `${this.i18n.name(m.nameEn, m.nameAr)} v${v.versionNo}` });
       this.versions.set(active);
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadGeneric')); }
   }
 
   async start() {
@@ -74,7 +74,7 @@ export class NewEvaluation {
     try {
       const created = await this.api.createEvaluation({ jobId: this.jobId, methodologyVersionId: this.versionId, evaluatorEmployeeId: null });
       await this.router.navigate(['/evaluation', created.id]);
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to create evaluation.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.createEvaluation')); }
     finally { this.busy.set(false); }
   }
 }

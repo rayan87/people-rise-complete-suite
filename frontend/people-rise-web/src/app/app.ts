@@ -63,7 +63,7 @@ export class App implements OnInit {
 
   async ngOnInit() {
     try { await this.session.loadTenants(); }
-    catch { this.error.set('Could not reach the API on http://localhost:5080. Is it running?'); }
+    catch { this.error.set(this.i18n.t('app.apiUnreachable')); }
   }
 
   onTenantChange(id: string) { this.session.setTenant(id || null); }
@@ -71,7 +71,7 @@ export class App implements OnInit {
   async refreshTenants() {
     this.error.set(null);
     try { await this.session.loadTenants(); }
-    catch { this.error.set('Could not load tenants — check the API and your X-User-Id.'); }
+    catch { this.error.set(this.i18n.t('app.tenantsLoadFailed')); }
   }
 
   @HostListener('document:keydown.escape')

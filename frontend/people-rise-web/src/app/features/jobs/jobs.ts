@@ -63,54 +63,54 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
       <!-- Filter bar -->
       <div class="filters">
         <div class="filter-group">
-          <label>Family</label>
+          <label>{{ i18n.t('field.family') }}</label>
           <select [ngModel]="filterFamily()" (ngModelChange)="filterFamily.set($event)">
-            <option value="">All</option>
+            <option value="">{{ i18n.t('common.all') }}</option>
             @for (f of families(); track f.id) { <option [value]="f.id">{{ i18n.name(f.nameEn, f.nameAr) }}</option> }
           </select>
         </div>
         <div class="filter-group">
-          <label>Level</label>
+          <label>{{ i18n.t('field.level') }}</label>
           <select [ngModel]="filterLevel()" (ngModelChange)="filterLevel.set($event)">
-            <option value="">All</option>
+            <option value="">{{ i18n.t('common.all') }}</option>
             @for (l of levels(); track l.id) { <option [value]="l.id">{{ i18n.name(l.nameEn, l.nameAr) }}</option> }
           </select>
         </div>
         <div class="filter-group">
-          <label>Status</label>
+          <label>{{ i18n.t('common.status') }}</label>
           <select [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)">
-            <option value="">All</option>
-            <option value="Draft">Draft</option>
-            <option value="Active">Active</option>
-            <option value="Archived">Archived</option>
+            <option value="">{{ i18n.t('common.all') }}</option>
+            <option value="Draft">{{ i18n.status('Draft') }}</option>
+            <option value="Active">{{ i18n.status('Active') }}</option>
+            <option value="Archived">{{ i18n.status('Archived') }}</option>
           </select>
         </div>
         <div class="filter-group">
-          <label>Grade</label>
+          <label>{{ i18n.t('field.grade') }}</label>
           <select [ngModel]="filterGrade()" (ngModelChange)="filterGrade.set($event)">
-            <option value="">All</option>
+            <option value="">{{ i18n.t('common.all') }}</option>
             @for (g of grades(); track g.id) { <option [value]="g.id">{{ g.code }}</option> }
           </select>
         </div>
         @if (filterFamily() || filterLevel() || filterStatus() || filterGrade()) {
-          <span class="clear-link" (click)="clearFilters()">Clear filters</span>
+          <span class="clear-link" (click)="clearFilters()">{{ i18n.t('jobs.clearFilters') }}</span>
         }
       </div>
 
       @if (loading()) {
         <p>{{ i18n.t('common.loading') }}</p>
       } @else if (filtered().length === 0) {
-        <p class="empty">{{ jobs().length === 0 ? i18n.t('jobs.none') : 'No jobs match the current filters.' }}</p>
+        <p class="empty">{{ jobs().length === 0 ? i18n.t('jobs.none') : i18n.t('jobs.noMatch') }}</p>
       } @else {
         <table>
           <thead>
             <tr>
-              <th>Code</th>
+              <th>{{ i18n.t('common.code') }}</th>
               <th>{{ i18n.t('field.title') }}</th>
               <th>{{ i18n.t('field.level') }}</th>
-              <th>Family</th>
+              <th>{{ i18n.t('field.family') }}</th>
               <th>{{ i18n.t('field.grade') }}</th>
-              <th>Band</th>
+              <th>{{ i18n.t('field.band') }}</th>
               <th>{{ i18n.t('common.status') }}</th>
               <th></th>
             </tr>
@@ -128,11 +128,11 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
                     {{ j.band.currency }} {{ j.band.minAmount | number:'1.0-0' }}–{{ j.band.maxAmount | number:'1.0-0' }}
                   } @else { — }
                 </td>
-                <td><span class="badge {{ j.status.toLowerCase() }}">{{ j.status }}</span></td>
+                <td><span class="badge {{ j.status.toLowerCase() }}">{{ i18n.status(j.status) }}</span></td>
                 <td style="text-align:end">
                   <div style="display:flex;gap:5px;justify-content:flex-end">
                     <a [routerLink]="['/jobs', j.id]">
-                      <button class="sm subtle">Details</button>
+                      <button class="sm subtle">{{ i18n.t('common.details') }}</button>
                     </a>
                     <button class="sm subtle icon" (click)="startEdit(j)"
                             [attr.aria-label]="i18n.t('common.edit') + ' ' + i18n.name(j.titleEn, j.titleAr)"
@@ -151,19 +151,19 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
                 <tr>
                   <td colspan="8" style="background:var(--surface-2); padding:.75rem">
                     <div class="row" style="margin:0">
-                      <div class="field" style="min-width:100px"><label>Code</label><input [(ngModel)]="editForm.code" /></div>
-                      <div class="field"><label>Title (EN)</label><input [(ngModel)]="editForm.titleEn" /></div>
-                      <div class="field"><label>Title (AR) <span class="optional">(opt.)</span></label><input [(ngModel)]="editForm.titleAr" dir="rtl" /></div>
+                      <div class="field" style="min-width:100px"><label>{{ i18n.t('common.code') }}</label><input [(ngModel)]="editForm.code" /></div>
+                      <div class="field"><label>{{ i18n.t('jobs.titleEn') }}</label><input [(ngModel)]="editForm.titleEn" /></div>
+                      <div class="field"><label>{{ i18n.t('jobs.titleAr') }} <span class="optional">({{ i18n.t('common.optional') }})</span></label><input [(ngModel)]="editForm.titleAr" dir="rtl" /></div>
                       <div class="field">
-                        <label>Family</label>
+                        <label>{{ i18n.t('field.family') }}</label>
                         <select [(ngModel)]="editForm.jobFamilyId">
                           <option [ngValue]="null">—</option>
                           @for (f of families(); track f.id) { <option [value]="f.id">{{ f.code }}</option> }
                         </select>
                       </div>
                       <div style="align-self:flex-end; display:flex; gap:.4rem">
-                        <button class="sm" (click)="saveEdit(j.id)" [disabled]="saving()">Save</button>
-                        <button class="sm subtle" (click)="editingId.set(null)">Cancel</button>
+                        <button class="sm" (click)="saveEdit(j.id)" [disabled]="saving()">{{ i18n.t('common.save') }}</button>
+                        <button class="sm subtle" (click)="editingId.set(null)">{{ i18n.t('common.cancel') }}</button>
                       </div>
                     </div>
                   </td>
@@ -173,7 +173,7 @@ import { Job, Level, JobFamily, Grade } from '../../core/models';
           </tbody>
         </table>
         <div class="faint" style="font-size:.75rem; padding:.5rem .75rem 0">
-          {{ filtered().length }} of {{ jobs().length }} jobs
+          {{ filtered().length }} {{ i18n.t('jobs.countOf') }} {{ jobs().length }} {{ i18n.t('dash.jobs') }}
         </div>
       }
     </div>
@@ -230,7 +230,7 @@ export class Jobs {
     try {
       const [j, l, f, g] = await Promise.all([this.api.jobs(), this.api.levels(), this.api.families(), this.api.grades()]);
       this.jobs.set(j); this.levels.set(l); this.families.set(f); this.grades.set(g);
-    } catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load jobs.'); }
+    } catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadJobs')); }
     finally { this.loading.set(false); }
   }
 
@@ -244,7 +244,7 @@ export class Jobs {
       this.showForm.set(false);
       this.toast.success(this.i18n.t('toast.created'));
       await this.load();
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to create job.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.createJob')); }
   }
 
   async saveEdit(id: string) {
@@ -257,7 +257,7 @@ export class Jobs {
       this.editingId.set(null);
       this.toast.success(this.i18n.t('toast.saved'));
       await this.load();
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to update job.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.updateJob')); }
     finally { this.saving.set(false); }
   }
 
@@ -273,6 +273,6 @@ export class Jobs {
       await this.api.deleteJob(id);
       this.toast.success(this.i18n.t('toast.deleted'));
       await this.load();
-    } catch (e: any) { this.toast.error(e?.error?.detail ?? 'Failed to delete job.'); }
+    } catch (e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.deleteJob')); }
   }
 }

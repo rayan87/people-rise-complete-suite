@@ -89,13 +89,13 @@ export class Salary {
     { midpoint: 0, overlapPct: null, currency: 'EGP', effectiveDate: '2026-01-01', edited: 'midpoint' };
 
   constructor() { effect(() => { this.session.tenantId(); this.load(); }); }
-  private fail(e: any) { this.toast.error(e?.error?.detail ?? 'Request failed.'); }
+  private fail(e: any) { this.toast.error(e?.error?.detail ?? this.i18n.t('err.generic')); }
 
   private async load() {
     if (!this.session.hasTenant()) { this.rows.set([]); return; }
     this.error.set(null);
     try { this.rows.set(await this.api.salaryBands()); }
-    catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load salary bands.'); }
+    catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadSalaryBands')); }
   }
 
   /** The previous grade's (by rank) existing band midpoint, or null if this is the first grade

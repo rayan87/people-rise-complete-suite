@@ -35,11 +35,11 @@ import { EvaluationListItem } from '../../core/models';
       @if (loading()) {
         <p class="muted">{{ i18n.t('common.loading') }}</p>
       } @else if (evaluations().length === 0) {
-        <p class="empty">{{ i18n.t('common.none') }} — <a routerLink="/evaluation/new">start an evaluation →</a></p>
+        <p class="empty">{{ i18n.t('common.none') }} — <a routerLink="/evaluation/new">{{ i18n.t('dash.startOne') }} →</a></p>
       } @else {
         <!-- Sort control -->
         <div class="sort-bar">
-          <label>Sort:</label>
+          <label>{{ i18n.t('common.sort') }}</label>
           <select [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event)">
             <option value="date">{{ i18n.t('eval.sortDate') }}</option>
             <option value="score">{{ i18n.t('eval.sortScore') }}</option>
@@ -50,11 +50,11 @@ import { EvaluationListItem } from '../../core/models';
             <tr>
               @if (sortBy() === 'score') { <th class="rank-col">{{ i18n.t('eval.rank') }}</th> }
               <th>{{ i18n.t('field.title') }}</th>
-              <th>Code</th>
-              <th>Score</th>
+              <th>{{ i18n.t('common.code') }}</th>
+              <th>{{ i18n.t('th.score') }}</th>
               <th>{{ i18n.t('field.grade') }}</th>
               <th>{{ i18n.t('common.status') }}</th>
-              <th>Date</th>
+              <th>{{ i18n.t('th.date') }}</th>
               <th></th>
             </tr>
           </thead>
@@ -76,7 +76,7 @@ import { EvaluationListItem } from '../../core/models';
                     <span class="badge approved">{{ e.recommendedGradeCode }}</span>
                   } @else { <span class="faint">—</span> }
                 </td>
-                <td><span class="badge {{ e.status.toLowerCase() }}">{{ e.status }}</span></td>
+                <td><span class="badge {{ e.status.toLowerCase() }}">{{ i18n.status(e.status) }}</span></td>
                 <td class="faint">{{ e.createdAt | date:'d MMM yyyy' }}</td>
                 <td style="text-align:end">
                   <a [routerLink]="['/evaluation', e.id]">{{ i18n.t('common.open') }} →</a>
@@ -127,7 +127,7 @@ export class EvaluationHub {
     if (!this.session.hasTenant()) { this.evaluations.set([]); return; }
     this.loading.set(true); this.error.set(null);
     try { this.evaluations.set(await this.api.evaluations()); }
-    catch (e: any) { this.error.set(e?.error?.detail ?? 'Failed to load evaluations.'); }
+    catch (e: any) { this.error.set(e?.error?.detail ?? this.i18n.t('err.loadEvaluations')); }
     finally { this.loading.set(false); }
   }
 }

@@ -126,24 +126,24 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
             <div class="stat-icon"><i class="ti ti-briefcase" aria-hidden="true"></i></div>
           </div>
           <div class="stat-val">{{ jobs().length }}</div>
-          <div class="stat-label">{{ i18n.t('dash.jobs') }} in library</div>
+          <div class="stat-label">{{ i18n.t('dash.jobs') }} {{ i18n.t('dash.inLibrary') }}</div>
         </div>
         <div class="stat">
           <div class="stat-icon-row">
             <div class="stat-icon"><i class="ti ti-clipboard-check" aria-hidden="true"></i></div>
             @if (approvedCount() > 0) {
-              <span class="stat-delta">{{ approvedCount() }} approved</span>
+              <span class="stat-delta">{{ approvedCount() }} {{ i18n.t('dash.approvedWord') }}</span>
             }
           </div>
           <div class="stat-val">{{ evaluations().length }}</div>
-          <div class="stat-label">Evaluations run</div>
+          <div class="stat-label">{{ i18n.t('dash.evaluationsRun') }}</div>
         </div>
         <div class="stat">
           <div class="stat-icon-row">
             <div class="stat-icon"><i class="ti ti-table" aria-hidden="true"></i></div>
           </div>
           <div class="stat-val">{{ grades().length }}</div>
-          <div class="stat-label">Grade levels defined</div>
+          <div class="stat-label">{{ i18n.t('dash.gradeLevelsDefined') }}</div>
         </div>
         <div class="stat">
           <div class="stat-icon-row">
@@ -157,21 +157,21 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
       <!-- Pipeline strip -->
       <div class="pipeline-card">
         <div class="pipeline-header">
-          <h2>Evaluation pipeline</h2>
-          <span>{{ jobs().length }} jobs in library</span>
+          <h2>{{ i18n.t('dash.pipeline') }}</h2>
+          <span>{{ jobs().length }} {{ i18n.t('dash.jobs') }} {{ i18n.t('dash.inLibrary') }}</span>
         </div>
         <div class="pipeline-steps">
           <div class="pipe-step" [class.done]="jobs().length > 0">
             <div class="pipe-bubble" [class.done]="jobs().length > 0">
               {{ jobs().length || '—' }}
             </div>
-            <div class="pipe-lbl">Jobs added</div>
+            <div class="pipe-lbl">{{ i18n.t('dash.pipeJobsAdded') }}</div>
           </div>
           <div class="pipe-step" [class.done]="evaluations().length > 0">
             <div class="pipe-bubble" [class.done]="evaluations().length > 0">
               {{ evaluations().length || '—' }}
             </div>
-            <div class="pipe-lbl">Evaluated</div>
+            <div class="pipe-lbl">{{ i18n.t('dash.evaluated') }}</div>
           </div>
           <div class="pipe-step" [class.done]="inReviewCount() > 0">
             <div class="pipe-bubble"
@@ -179,25 +179,25 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
                  [class.active]="inReviewCount() > 0">
               {{ inReviewCount() || '—' }}
             </div>
-            <div class="pipe-lbl">In review</div>
+            <div class="pipe-lbl">{{ i18n.t('dash.pipeInReview') }}</div>
           </div>
           <div class="pipe-step" [class.done]="approvedCount() > 0">
             <div class="pipe-bubble" [class.done]="approvedCount() > 0">
               {{ approvedCount() || '—' }}
             </div>
-            <div class="pipe-lbl">Approved</div>
+            <div class="pipe-lbl">{{ i18n.status('Approved') }}</div>
           </div>
           <div class="pipe-step" [class.done]="grades().length > 0">
             <div class="pipe-bubble" [class.done]="grades().length > 0">
               {{ grades().length || '—' }}
             </div>
-            <div class="pipe-lbl">Grade structure</div>
+            <div class="pipe-lbl">{{ i18n.t('dash.pipeGradeStructure') }}</div>
           </div>
           <div class="pipe-step" [class.done]="bandCount() > 0">
             <div class="pipe-bubble" [class.done]="bandCount() > 0">
               {{ bandCount() || '—' }}
             </div>
-            <div class="pipe-lbl">Salary bands</div>
+            <div class="pipe-lbl">{{ i18n.t('dash.bands') }}</div>
           </div>
         </div>
       </div>
@@ -208,24 +208,24 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
         <!-- Recent activity -->
         <div class="activity-card">
           <div class="card-hd">
-            <h2>Recent evaluations</h2>
+            <h2>{{ i18n.t('dash.recent') }}</h2>
             <a class="view-all" routerLink="/evaluation">
-              View all <i class="ti ti-arrow-right" aria-hidden="true" style="font-size:13px"></i>
+              {{ i18n.t('dash.viewAll') }} <i class="ti ti-arrow-right" aria-hidden="true" style="font-size:13px"></i>
             </a>
           </div>
           @if (loading()) {
-            <p class="empty">Loading…</p>
+            <p class="empty">{{ i18n.t('common.loading') }}</p>
           } @else if (evaluations().length === 0) {
-            <p class="empty">No evaluations yet. <a routerLink="/evaluation/new">Start one →</a></p>
+            <p class="empty">{{ i18n.t('job.noEvals') }} <a routerLink="/evaluation/new">{{ i18n.t('dash.startOne') }} →</a></p>
           } @else {
             <table>
               <thead>
                 <tr>
-                  <th>Job</th>
-                  <th>Score</th>
-                  <th>Grade</th>
-                  <th>Status</th>
-                  <th>Date</th>
+                  <th>{{ i18n.t('th.job') }}</th>
+                  <th>{{ i18n.t('th.score') }}</th>
+                  <th>{{ i18n.t('field.grade') }}</th>
+                  <th>{{ i18n.t('common.status') }}</th>
+                  <th>{{ i18n.t('th.date') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -242,7 +242,7 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
                       } @else { <span class="faint">—</span> }
                     </td>
                     <td>
-                      <span class="badge {{ e.status.toLowerCase() }}">{{ e.status }}</span>
+                      <span class="badge {{ e.status.toLowerCase() }}">{{ i18n.status(e.status) }}</span>
                     </td>
                     <td class="faint">{{ e.createdAt | date:'d MMM' }}</td>
                   </tr>
@@ -257,10 +257,10 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
           <a class="module-card" routerLink="/evaluation">
             <div class="mod-icon ev"><i class="ti ti-clipboard-list" aria-hidden="true"></i></div>
             <div>
-              <div class="mod-name">Job Evaluation</div>
+              <div class="mod-name">{{ i18n.t('nav.evaluation') }}</div>
               <div class="mod-desc">
-                @if (pendingCount() > 0) { {{ pendingCount() }} pending · }
-                {{ approvedCount() }} approved
+                @if (pendingCount() > 0) { {{ pendingCount() }} {{ i18n.t('dash.pendingWord') }} · }
+                {{ approvedCount() }} {{ i18n.t('dash.approvedWord') }}
               </div>
             </div>
             <i class="ti ti-chevron-right mod-arrow" aria-hidden="true"></i>
@@ -268,10 +268,10 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
           <a class="module-card" routerLink="/grading">
             <div class="mod-icon gr"><i class="ti ti-table" aria-hidden="true"></i></div>
             <div>
-              <div class="mod-name">Grading Structure</div>
+              <div class="mod-name">{{ i18n.t('nav.grading') }}</div>
               <div class="mod-desc">
-                @if (grades().length > 0) { {{ grades().length }} levels defined }
-                @else { Not started }
+                @if (grades().length > 0) { {{ grades().length }} {{ i18n.t('dash.levelsDefined') }} }
+                @else { {{ i18n.t('dash.notStarted') }} }
               </div>
             </div>
             <i class="ti ti-chevron-right mod-arrow" aria-hidden="true"></i>
@@ -279,10 +279,10 @@ import { Job, EvaluationListItem, Grade, SalaryBandRow } from '../../core/models
           <a class="module-card" routerLink="/salary">
             <div class="mod-icon sb"><i class="ti ti-chart-bar" aria-hidden="true"></i></div>
             <div>
-              <div class="mod-name">Salary Builder</div>
+              <div class="mod-name">{{ i18n.t('nav.salary') }}</div>
               <div class="mod-desc">
-                @if (bandCount() > 0) { {{ bandCount() }} bands configured }
-                @else { Not started }
+                @if (bandCount() > 0) { {{ bandCount() }} {{ i18n.t('dash.bandsConfigured') }} }
+                @else { {{ i18n.t('dash.notStarted') }} }
               </div>
             </div>
             <i class="ti ti-chevron-right mod-arrow" aria-hidden="true"></i>
@@ -331,7 +331,7 @@ export class Dashboard {
       this.grades.set(grades);
       this.bands.set(bands);
     } catch (e: any) {
-      this.error.set(e?.error?.detail ?? 'Failed to load dashboard data.');
+      this.error.set(e?.error?.detail ?? this.i18n.t('err.loadDashboard'));
     } finally {
       this.loading.set(false);
     }
