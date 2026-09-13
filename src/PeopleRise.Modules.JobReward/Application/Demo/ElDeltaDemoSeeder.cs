@@ -1,3 +1,4 @@
+using PeopleRise.Core.Application.Demo;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 
@@ -5,10 +6,11 @@ namespace PeopleRise.Modules.JobReward.Application.Demo;
 
 /// <summary>
 /// Seeds a fresh tenant DB with a realistic, bilingual (EN/AR) dataset for the pilot customer:
-/// El-Delta, an Egyptian IT company (150-250 staff). Produces the full design-time chain - levels,
-/// IT job families, a grade grid, a published weighted point-factor methodology, ~39 jobs, scored
-/// evaluations, and EGP salary bands. All entities are created through their domain factories;
-/// evaluations go through the real Draft -> Submit -> Approve transitions.
+/// El-Delta, an Egyptian IT company (150-250 staff). Produces the Job Evaluation + Compensation
+/// slice - a published weighted point-factor methodology, scored evaluations, and EGP salary bands
+/// - against the core rows (levels, families, grades, the ~39 jobs) that
+/// ElDeltaCoreSeeder.SeedAsync already committed. All entities are created through their domain
+/// factories; evaluations go through the real Draft -> Submit -> Approve transitions.
 ///
 /// The methodology (6 factors, 26 questions, 130 answer options, all with bilingual help text) is
 /// the real content authored by the consultant in the El-Delta tenant's Draft v2, captured here so
@@ -20,51 +22,14 @@ internal static class ElDeltaDemoSeeder
     private sealed record QuestionDef(string TextEn, string? TextAr, string? HelpTextEn, string? HelpTextAr, decimal Weight, bool IsRequired, OptionDef[] Options);
     private sealed record FactorDef(string Code, string NameEn, string? NameAr, string? HelpTextEn, string? HelpTextAr, decimal Weight, QuestionDef[] Questions);
 
-    public static async Task<DemoSeedSummary> SeedAsync(JobRewardDbContext db, CancellationToken ct = default)
+    /// <returns>The row-count summary, plus which job got which grade (source Evaluated) so the
+    /// caller (JobRewardModule.SeedElDeltaDemoAsync) can stamp it onto the core Job via
+    /// CoreModule.AssignJobGradesAsync - this module never writes to Core's Job directly.</returns>
+    public static async Task<(DemoSeedSummary Summary, IReadOnlyDictionary<Guid, Guid> GradeAssignments)> SeedAsync(
+        JobRewardDbContext db, ElDeltaCoreSeedResult coreSeed, CancellationToken ct = default)
     {
-        // ---- Levels (El-Delta's five; C-level is not run through the evaluation questionnaire) ----
-        var levelDefs = new (string Code, string En, string Ar, int Rank)[]
-        {
-            ("BC",   "Blue Collar",            "ياقة زرقاء", 1),
-            ("IC",   "Individual Contributor", "فرد مساهم",  2),
-            ("SUP",  "Supervisory",            "إشرافي",     3),
-            ("MGR",  "Managerial",             "إداري",      4),
-            ("EXEC", "C-Level",                "تنفيذي",     5),
-        };
-        var levels = levelDefs.ToDictionary(d => d.Code, d => Level.Create(d.Code, d.En, d.Ar, d.Rank));
-        db.Levels.AddRange(levels.Values);
-
-        // ---- Job families ----
-        var familyDefs = new (string Code, string En, string Ar)[]
-        {
-            ("ENG",    "Software Engineering",         "هندسة البرمجيات"),
-            ("QA",     "Quality Assurance",            "ضمان الجودة"),
-            ("DEVOPS", "DevOps & Infrastructure",      "العمليات والبنية التحتية"),
-            ("DATA",   "Data & Analytics",             "البيانات والتحليلات"),
-            ("PROD",   "Product & Design",             "المنتج والتصميم"),
-            ("SEC",    "Information Security",          "أمن المعلومات"),
-            ("ITSUP",  "IT Support",                   "الدعم الفني"),
-            ("PMO",    "Project Management",           "إدارة المشاريع"),
-            ("HR",     "Human Resources",              "الموارد البشرية"),
-            ("FIN",    "Finance & Accounting",         "المالية والمحاسبة"),
-            ("SAL",    "Sales & Business Development",  "المبيعات وتطوير الأعمال"),
-            ("ADM",    "Administration",               "الإدارة"),
-        };
-        var families = familyDefs.ToDictionary(d => d.Code, d => JobFamily.Create(d.Code, d.En, d.Ar));
-        db.JobFamilies.AddRange(families.Values);
-
-        // ---- Grade grid (G1..G12 across the five levels) ----
-        var gradeDefs = new (string Code, int Rank, string Level)[]
-        {
-            ("G1", 1, "BC"), ("G2", 2, "BC"),
-            ("G3", 3, "IC"), ("G4", 4, "IC"), ("G5", 5, "IC"), ("G6", 6, "IC"),
-            ("G7", 7, "SUP"), ("G8", 8, "SUP"),
-            ("G9", 9, "MGR"), ("G10", 10, "MGR"), ("G11", 11, "MGR"),
-            ("G12", 12, "EXEC"),
-        };
-        var grades = gradeDefs.ToDictionary(
-            d => d.Code, d => Grade.Create(d.Code, $"Grade {d.Rank}", $"الدرجة {d.Rank}", d.Rank, levels[d.Level].Id));
-        db.Grades.AddRange(grades.Values);
+        var grades = coreSeed.GradeIdsByCode;
+        var jobs = coreSeed.JobIdsByCode;
 
         // ---- Methodology: the calibrated El-Delta point-factor questionnaire, 200-1000 point budget.
         // 6 factors (weights 30/20/25/15/5/5 = 100%), 26 questions (weights sum to 100% per factor),
@@ -358,7 +323,7 @@ internal static class ElDeltaDemoSeeder
 
         // ---- Grade mappings: assign G1..G12 (rank order), then auto-tile the point budget across them.
         var gradeCodesInRankOrder = new[] { "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12" };
-        var gradeMappings = gradeCodesInRankOrder.Select(code => version.AssignGrade(grades[code].Id)).ToList();
+        var gradeMappings = gradeCodesInRankOrder.Select(code => version.AssignGrade(grades[code])).ToList();
         version.AutoAssignGradeRanges(gradeMappings.Select(m => m.Id).ToList());
 
         Guid? ResolveGrade(int total) => gradeMappings
@@ -368,57 +333,8 @@ internal static class ElDeltaDemoSeeder
 
         version.Publish();
 
-        // ---- Jobs (bilingual titles). The comment column documents each job's intended level for
-        // readers of this seed data; level itself is no longer stored on Job - it flows transitively
-        // via Job.Grade.LevelId once the job is graded (see the evaluations/grade-assignment below). ----
-        // BC=Blue Collar, IC=Individual Contributor, SUP=Supervisory, MGR=Managerial, EXEC=C-Level
-        var jobDefs = new (string Code, string En, string Ar, string Family)[]
-        {
-            ("ENG-SE1", "Junior Software Engineer", "مهندس برمجيات مبتدئ", "ENG"),          // IC
-            ("ENG-SE2", "Software Engineer", "مهندس برمجيات", "ENG"),                      // IC
-            ("ENG-SE3", "Senior Software Engineer", "مهندس برمجيات أول", "ENG"),           // IC
-            ("ENG-TL",  "Tech Lead", "قائد تقني", "ENG"),                                  // SUP
-            ("ENG-EM",  "Engineering Manager", "مدير هندسة", "ENG"),                       // MGR
-            ("QA-1",    "QA Engineer", "مهندس ضمان جودة", "QA"),                           // IC
-            ("QA-2",    "Senior QA Engineer", "مهندس ضمان جودة أول", "QA"),                // IC
-            ("QA-L",    "QA Lead", "قائد ضمان الجودة", "QA"),                              // SUP
-            ("OPS-1",   "DevOps Engineer", "مهندس عمليات", "DEVOPS"),                      // IC
-            ("OPS-2",   "Senior DevOps Engineer", "مهندس عمليات أول", "DEVOPS"),           // IC
-            ("OPS-L",   "Infrastructure Lead", "قائد البنية التحتية", "DEVOPS"),           // SUP
-            ("OPS-M",   "Infrastructure Manager", "مدير البنية التحتية", "DEVOPS"),        // MGR
-            ("DAT-AN",  "Data Analyst", "محلل بيانات", "DATA"),                            // IC
-            ("DAT-DE",  "Data Engineer", "مهندس بيانات", "DATA"),                          // IC
-            ("DAT-SE",  "Senior Data Engineer", "مهندس بيانات أول", "DATA"),               // IC
-            ("DAT-L",   "Data & Analytics Lead", "قائد البيانات والتحليلات", "DATA"),      // SUP
-            ("PRD-DS",  "Product Designer", "مصمم منتج", "PROD"),                          // IC
-            ("PRD-PM",  "Product Manager", "مدير منتج", "PROD"),                           // SUP
-            ("PRD-SPM", "Senior Product Manager", "مدير منتج أول", "PROD"),                // MGR
-            ("SEC-1",   "Security Engineer", "مهندس أمن معلومات", "SEC"),                  // IC
-            ("SEC-L",   "Security Lead", "قائد أمن المعلومات", "SEC"),                     // SUP
-            ("SUP-1",   "IT Support Specialist", "أخصائي دعم فني", "ITSUP"),               // BC
-            ("SUP-2",   "Senior IT Support Specialist", "أخصائي دعم فني أول", "ITSUP"),    // IC
-            ("SUP-S",   "IT Support Supervisor", "مشرف دعم فني", "ITSUP"),                 // SUP
-            ("PMO-C",   "Project Coordinator", "منسق مشاريع", "PMO"),                      // IC
-            ("PMO-PM",  "Project Manager", "مدير مشروع", "PMO"),                           // SUP
-            ("PMO-L",   "PMO Lead", "قائد مكتب إدارة المشاريع", "PMO"),                    // MGR
-            ("HR-1",    "HR Specialist", "أخصائي موارد بشرية", "HR"),                      // IC
-            ("HR-M",    "HR Manager", "مدير موارد بشرية", "HR"),                           // MGR
-            ("FIN-1",   "Accountant", "محاسب", "FIN"),                                     // IC
-            ("FIN-2",   "Senior Accountant", "محاسب أول", "FIN"),                          // IC
-            ("FIN-M",   "Finance Manager", "مدير مالي", "FIN"),                            // MGR
-            ("SAL-1",   "Sales Executive", "تنفيذي مبيعات", "SAL"),                        // IC
-            ("SAL-AM",  "Account Manager", "مدير حسابات", "SAL"),                          // SUP
-            ("SAL-M",   "Sales Manager", "مدير مبيعات", "SAL"),                            // MGR
-            ("ADM-1",   "Office Administrator", "مسؤول إداري", "ADM"),                     // BC
-            ("ADM-S",   "Admin Supervisor", "مشرف إداري", "ADM"),                          // SUP
-            ("EXE-CTO", "Chief Technology Officer", "الرئيس التنفيذي للتقنية", "ENG"),     // EXEC
-            ("EXE-CEO", "Chief Executive Officer", "الرئيس التنفيذي", "ADM"),              // EXEC
-        };
-        var jobs = jobDefs.ToDictionary(
-            d => d.Code, d => Job.Create(d.Code, d.En, d.Ar, null, null, families[d.Family].Id));
-        db.Jobs.AddRange(jobs.Values);
-
-        // ---- Evaluations (representative jobs scored through the real workflow) ----
+        // ---- Evaluations (representative jobs scored through the real workflow). Jobs themselves
+        // are core rows already committed by ElDeltaCoreSeeder - only their ids are needed here. ----
         // Ratings (1-5, unified scale) per factor, in KNW/PS/RI/LED/COMM/COND order (factorBuilds order).
         // Each factor may have several questions; the same rating is applied to every question in that
         // factor for a given evaluation - a deliberate simplification for demo data (real evaluators
@@ -441,10 +357,11 @@ internal static class ElDeltaDemoSeeder
         };
 
         var evalCount = 0;
+        var gradeAssignments = new Dictionary<Guid, Guid>();
         foreach (var e in evalDefs)
         {
-            var job = jobs[e.Job];
-            var eval = Evaluation.CreateDraft(job.Id, version.Id, evaluatorEmployeeId: null);
+            var jobId = jobs[e.Job];
+            var eval = Evaluation.CreateDraft(jobId, version.Id, evaluatorEmployeeId: null);
             var total = 0;
             for (var i = 0; i < factorBuilds.Count; i++)
             {
@@ -470,29 +387,33 @@ internal static class ElDeltaDemoSeeder
             if (e.Approve)
             {
                 eval.Approve();
-                if (gradeId is { } g) job.AssignGrade(g, GradeSource.Evaluated);
+                // The job itself lives in PeopleRise.Core - record the outcome; the caller applies
+                // it via CoreModule.AssignJobGradesAsync (this module never writes to Core's Job).
+                if (gradeId is { } g) gradeAssignments[jobId] = g;
             }
             db.Evaluations.Add(eval);
             evalCount++;
         }
 
-        // ---- Salary bands (Farouk's defaults: fixed ±25% spread, 25% grade progression), EGP ----
+        // ---- Salary bands (Farouk's defaults: 25% half-spread, 25% grade progression), EGP.
+        // Provenance Designed - mirrors the Compensation-generated path (GenerateBands). ----
         var effective = new DateOnly(2026, 1, 1);
         var bandCount = 0;
         decimal? previousMidpoint = null;
-        foreach (var grade in grades.Values)
+        foreach (var gradeCode in gradeCodesInRankOrder)
         {
             var raw = previousMidpoint is { } prev ? prev * 1.25m : 8000m;
             var midpoint = Math.Round(raw / 100m, MidpointRounding.AwayFromZero) * 100m;
-            db.SalaryBands.Add(SalaryBand.Create(grade.Id, "EGP", midpoint, previousMidpoint, effective));
+            db.SalaryBands.Add(SalaryBand.Create(grades[gradeCode], "EGP", midpoint, previousMidpoint, effective, BandProvenance.Designed));
             previousMidpoint = midpoint;
             bandCount++;
         }
 
         await db.SaveChangesAsync(ct);
 
-        return new DemoSeedSummary(
-            Levels: levels.Count, JobFamilies: families.Count, Grades: grades.Count,
-            Jobs: jobs.Count, Evaluations: evalCount, SalaryBands: bandCount);
+        var summary = new DemoSeedSummary(
+            Levels: coreSeed.LevelIdsByCode.Count, JobFamilies: coreSeed.JobFamilyIdsByCode.Count,
+            Grades: grades.Count, Jobs: jobs.Count, Evaluations: evalCount, SalaryBands: bandCount);
+        return (summary, gradeAssignments);
     }
 }

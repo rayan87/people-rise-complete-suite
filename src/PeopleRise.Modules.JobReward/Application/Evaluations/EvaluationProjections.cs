@@ -1,19 +1,36 @@
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
+using PeopleRise.Core.Application.Jobs;
 using PeopleRise.Modules.JobReward.Infrastructure;
+using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.Evaluations;
 
 /// <summary>Builds the full evaluation result (header + factor breakdown + audit trail). Shared by
-/// GetEvaluation, SubmitAnswers and ApproveEvaluation so the projection lives in one place.</summary>
+/// GetEvaluation, SubmitAnswers and ApproveEvaluation so the projection lives in one place. Job and
+/// Grade live in PeopleRise.Core's CoreDbContext - fetched separately via its public contract and
+/// stitched in here, since they can no longer be joined into one query with the Evaluation itself.</summary>
 internal static class EvaluationProjections
 {
-    public static async Task<EvaluationResultDto?> BuildAsync(JobRewardDbContext db, Guid id, CancellationToken ct)
+    public static async Task<EvaluationResultDto?> BuildAsync(
+        JobRewardDbContext db,
+        IQueryHandler<GetJobQuery, Result<JobDto>> getJob,
+        IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades,
+        Guid id, CancellationToken ct)
     {
-        var eval = await db.Evaluations
-            .Include(e => e.Job)
-            .Include(e => e.RecommendedGrade)
-            .FirstOrDefaultAsync(e => e.Id == id, ct);
+        var eval = await db.Evaluations.FirstOrDefaultAsync(e => e.Id == id, ct);
         if (eval is null) return null;
+
+        var jobResult = await getJob.Handle(new GetJobQuery(eval.JobId), ct);
+        var job = jobResult.IsSuccess ? jobResult.Value : null;
+
+        GradeDto? recommendedGrade = null;
+        if (eval.RecommendedGradeId is { } recommendedGradeId)
+        {
+            var gradesResult = await listGrades.Handle(new ListGradesQuery(), ct);
+            if (gradesResult.IsSuccess)
+                recommendedGrade = gradesResult.Value.FirstOrDefault(g => g.Id == recommendedGradeId);
+        }
 
         var factorScores = await (
             from fs in db.EvaluationFactorScores
@@ -57,10 +74,10 @@ internal static class EvaluationProjections
         }).ToList();
 
         return new EvaluationResultDto(
-            eval.Id, eval.JobId, eval.Job?.Code ?? "", eval.Job?.TitleEn ?? "", eval.Job?.TitleAr,
+            eval.Id, eval.JobId, job?.Code ?? "", job?.TitleEn ?? "", job?.TitleAr,
             eval.MethodologyVersionId, eval.Status.ToString(),
             eval.TotalScore, eval.RecommendedGradeId,
-            eval.RecommendedGrade?.Code, eval.RecommendedGrade?.NameEn, eval.RecommendedGrade?.NameAr,
+            recommendedGrade?.Code, recommendedGrade?.NameEn, recommendedGrade?.NameAr,
             eval.SubmittedAt, eval.ApprovedAt, factorScores, answers);
     }
 }

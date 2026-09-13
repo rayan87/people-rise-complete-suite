@@ -29,12 +29,3 @@ public record EvaluationListItemDto(
     Guid Id, Guid JobId, string JobCode, string JobTitleEn, string? JobTitleAr,
     Guid MethodologyVersionId, string Status, int? TotalScore,
     Guid? RecommendedGradeId, string? RecommendedGradeCode, DateTime CreatedAt);
-
-// ---- calibration (dry-run, no persistence) ----
-public record CalibrationJob(Guid JobId, IReadOnlyList<AnswerSelection> Answers);
-
-public record CalibrationRowDto(
-    int Rank, Guid JobId, string JobCode, string JobTitleEn, string? JobTitleAr,
-    int TotalScore, Guid? RecommendedGradeId, string? RecommendedGradeCode);
-
-public record CalibrationResultDto(Guid MethodologyVersionId, IReadOnlyList<CalibrationRowDto> Ranking);

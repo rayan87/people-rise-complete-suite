@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -11,7 +12,8 @@ namespace PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
 // overlap - across every currently-assigned grade, ordered by the grade's own rank.
 public sealed record AutoAssignGradeRangesCommand(Guid VersionId);
 
-internal sealed class AutoAssignGradeRangesHandler(JobRewardDbContext db)
+internal sealed class AutoAssignGradeRangesHandler(
+    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<AutoAssignGradeRangesCommand, Result<IReadOnlyList<GradeMappingDto>>>
 {
     public async Task<Result<IReadOnlyList<GradeMappingDto>>> Handle(AutoAssignGradeRangesCommand cmd, CancellationToken ct)
@@ -30,11 +32,15 @@ internal sealed class AutoAssignGradeRangesHandler(JobRewardDbContext db)
             return Error.Validation("The version has no assigned grades to range.");
         }
 
+        // Grade (with its Rank) lives in PeopleRise.Core - fetch separately and zip in C#, since
+        // GradeMapping and Grade are on separate DbContexts and can no longer be joined in one query.
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), ct);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
+        var rankByGradeId = gradesResult.Value.ToDictionary(g => g.Id, g => g.Rank);
+
         var gradeMappingIds = version.GradeMappings.Select(g => g.Id).ToList();
-        var rankByMappingId = await db.GradeMappings
-            .Where(g => gradeMappingIds.Contains(g.Id))
-            .Join(db.Grades, g => g.GradeId, grade => grade.Id, (g, grade) => new { g.Id, grade.Rank })
-            .ToDictionaryAsync(x => x.Id, x => x.Rank, ct);
+        var rankByMappingId = version.GradeMappings
+            .ToDictionary(g => g.Id, g => rankByGradeId.GetValueOrDefault(g.GradeId));
 
         var orderedIds = gradeMappingIds.OrderBy(id => rankByMappingId[id]).ToList();
 

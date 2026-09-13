@@ -6,7 +6,7 @@ using PeopleRise.SharedKernel;
 namespace PeopleRise.Modules.JobReward.Application.Evaluations;
 
 /// <summary>
-/// Server-side weighted point-factor scoring shared by SubmitAnswers and Calibrate (so the rules live once).
+/// Server-side weighted point-factor scoring used by SubmitAnswers (so the rules live in one place).
 /// Factor points = MethodologyVersion.MaxPoints x Factor.Weight / 100. Question points = Factor points x
 /// Question.Weight / 100. Question score = Question points x (rating / 5), rating being the unified 1-5
 /// answer scale. An unanswered optional question's points are redistributed equally across the other

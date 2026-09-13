@@ -4,16 +4,17 @@ namespace PeopleRise.Modules.JobReward.Domain;
 
 internal class Evaluation : Entity
 {
+    // JobId, EvaluatorEmployeeId, RecommendedGradeId are ids only - Job/Employee/Grade live in
+    // PeopleRise.Core's CoreDbContext, and JobReward may read the core but never hold an EF
+    // navigation into it (different DbContext, same physical tenant database - see CoreModule's
+    // public Application.Jobs contract for how to look these up).
     public Guid JobId { get; private set; }
-    public Job? Job { get; private set; }
     public Guid MethodologyVersionId { get; private set; }
     public MethodologyVersion? MethodologyVersion { get; private set; }
     public Guid? EvaluatorEmployeeId { get; private set; }
-    public Employee? EvaluatorEmployee { get; private set; }
     public EvaluationStatus Status { get; private set; } = EvaluationStatus.Draft;
     public int? TotalScore { get; private set; }
     public Guid? RecommendedGradeId { get; private set; }
-    public Grade? RecommendedGrade { get; private set; }
     public DateTime? SubmittedAt { get; private set; }
     public DateTime? ApprovedAt { get; private set; }
     public Guid? ApprovedByEmployeeId { get; private set; }

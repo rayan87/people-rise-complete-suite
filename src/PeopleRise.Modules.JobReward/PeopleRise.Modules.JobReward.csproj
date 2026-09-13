@@ -8,11 +8,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PeopleRise.SharedKernel\PeopleRise.SharedKernel.csproj" />
     <ProjectReference Include="..\PeopleRise.Tenancy\PeopleRise.Tenancy.csproj" />
+    <ProjectReference Include="..\PeopleRise.Core\PeopleRise.Core.csproj" />
   </ItemGroup>
 </Project>

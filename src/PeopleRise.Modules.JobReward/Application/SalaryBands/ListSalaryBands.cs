@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
@@ -7,12 +8,13 @@ namespace PeopleRise.Modules.JobReward.Application.SalaryBands;
 
 public sealed record ListSalaryBandsQuery();
 
-internal sealed class ListSalaryBandsHandler(JobRewardDbContext db)
+internal sealed class ListSalaryBandsHandler(
+    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : IQueryHandler<ListSalaryBandsQuery, Result<IReadOnlyList<SalaryBandRowDto>>>
 {
     public async Task<Result<IReadOnlyList<SalaryBandRowDto>>> Handle(ListSalaryBandsQuery query, CancellationToken ct)
     {
-        var rows = await SalaryBandProjections.RowsAsync(db, ct);
+        var rows = await SalaryBandProjections.RowsAsync(db, listGrades, ct);
         return Result<IReadOnlyList<SalaryBandRowDto>>.Success(rows);
     }
 }

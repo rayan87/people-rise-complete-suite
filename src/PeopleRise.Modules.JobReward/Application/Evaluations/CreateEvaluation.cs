@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Jobs;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -9,14 +10,15 @@ namespace PeopleRise.Modules.JobReward.Application.Evaluations;
 
 public sealed record CreateEvaluationCommand(Guid JobId, Guid MethodologyVersionId, Guid? EvaluatorEmployeeId = null);
 
-internal sealed class CreateEvaluationHandler(JobRewardDbContext db)
+internal sealed class CreateEvaluationHandler(
+    JobRewardDbContext db, IQueryHandler<GetJobQuery, Result<JobDto>> getJob)
     : ICommandHandler<CreateEvaluationCommand, Result<EvaluationCreatedDto>>
 {
     public async Task<Result<EvaluationCreatedDto>> Handle(CreateEvaluationCommand cmd, CancellationToken ct)
     {
-        var job = await db.Jobs.FirstOrDefaultAsync(j => j.Id == cmd.JobId, ct);
-
-        if (job is null)
+        // Job (and the evaluator, a core Employee) live in PeopleRise.Core.
+        var jobResult = await getJob.Handle(new GetJobQuery(cmd.JobId), ct);
+        if (jobResult.IsFailure)
         {
             return Error.NotFound("Job not found.");
         }
@@ -34,12 +36,10 @@ internal sealed class CreateEvaluationHandler(JobRewardDbContext db)
             return Error.Validation($"Methodology version is {version.Status}; evaluations can only pin an Active version.");
         }
 
-        if (cmd.EvaluatorEmployeeId is { } empId 
-            && !await db.Employees.AnyAsync(e => e.Id == empId, ct))
-        {
-            return Error.NotFound("Evaluator employee not found.");
-        }
-            
+        // NOTE: pre-extraction this also verified the evaluator employee exists (Employee is now a
+        // core entity with no wired lookup-by-id contract yet - EvaluatorEmployeeId is accepted
+        // as-is; add a Core query here once one exists).
+
         var evaluation = Evaluation.CreateDraft(cmd.JobId, cmd.MethodologyVersionId, cmd.EvaluatorEmployeeId);
         db.Evaluations.Add(evaluation);
         await db.SaveChangesAsync(ct);

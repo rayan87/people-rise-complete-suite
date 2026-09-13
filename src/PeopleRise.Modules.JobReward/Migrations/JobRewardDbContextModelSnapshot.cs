@@ -17,7 +17,7 @@ namespace PeopleRise.Modules.JobReward.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -108,84 +108,7 @@ namespace PeopleRise.Modules.JobReward.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("JobFamilyId");
-
                     b.ToTable("band_positioning_policies");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Employee", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("EmployeeNo")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("employee_no");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("full_name");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmployeeNo")
-                        .IsUnique();
-
-                    b.ToTable("employees");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.EmployeeAssignment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("EmployeeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("employee_id");
-
-                    b.Property<DateOnly?>("EndDate")
-                        .HasColumnType("date")
-                        .HasColumnName("end_date");
-
-                    b.Property<Guid>("PositionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("position_id");
-
-                    b.Property<DateOnly>("StartDate")
-                        .HasColumnType("date")
-                        .HasColumnName("start_date");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmployeeId");
-
-                    b.HasIndex("PositionId")
-                        .IsUnique()
-                        .HasFilter("end_date IS NULL");
-
-                    b.ToTable("employee_assignments");
                 });
 
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.EmployeeCompensation", b =>
@@ -222,8 +145,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                         .HasColumnName("import_batch_id");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("EmployeeId");
 
                     b.HasIndex("ImportBatchId");
 
@@ -285,13 +206,7 @@ namespace PeopleRise.Modules.JobReward.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EvaluatorEmployeeId");
-
-                    b.HasIndex("JobId");
-
                     b.HasIndex("MethodologyVersionId");
-
-                    b.HasIndex("RecommendedGradeId");
 
                     b.ToTable("evaluations");
                 });
@@ -424,56 +339,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                     b.ToTable("factors");
                 });
 
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Grade", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("level_id");
-
-                    b.Property<string>("NameAr")
-                        .HasColumnType("text")
-                        .HasColumnName("name_ar");
-
-                    b.Property<string>("NameEn")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name_en");
-
-                    b.Property<int>("Rank")
-                        .HasColumnType("integer")
-                        .HasColumnName("rank");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("LevelId");
-
-                    b.HasIndex("Rank")
-                        .IsUnique();
-
-                    b.ToTable("grades");
-                });
-
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.GradeMapping", b =>
                 {
                     b.Property<Guid>("Id")
@@ -507,8 +372,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GradeId");
-
                     b.HasIndex("MethodologyVersionId", "GradeId")
                         .IsUnique();
 
@@ -516,201 +379,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                         {
                             t.HasCheckConstraint("ck_grade_mapping_score", "max_score >= min_score");
                         });
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Job", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("DescriptionAr")
-                        .HasColumnType("text")
-                        .HasColumnName("description_ar");
-
-                    b.Property<string>("DescriptionEn")
-                        .HasColumnType("text")
-                        .HasColumnName("description_en");
-
-                    b.Property<Guid?>("GradeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("grade_id");
-
-                    b.Property<string>("GradeSource")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("grade_source");
-
-                    b.Property<Guid?>("JobFamilyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("job_family_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("TitleAr")
-                        .HasColumnType("text")
-                        .HasColumnName("title_ar");
-
-                    b.Property<string>("TitleEn")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("title_en");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("GradeId");
-
-                    b.HasIndex("JobFamilyId");
-
-                    b.ToTable("jobs");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.JobFamily", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("NameAr")
-                        .HasColumnType("text")
-                        .HasColumnName("name_ar");
-
-                    b.Property<string>("NameEn")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name_en");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("job_families");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.JobPosition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("job_id");
-
-                    b.Property<Guid>("OrgUnitId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("org_unit_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("status");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("JobId");
-
-                    b.HasIndex("OrgUnitId");
-
-                    b.ToTable("job_positions");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Level", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("NameAr")
-                        .HasColumnType("text")
-                        .HasColumnName("name_ar");
-
-                    b.Property<string>("NameEn")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name_en");
-
-                    b.Property<int>("Rank")
-                        .HasColumnType("integer")
-                        .HasColumnName("rank");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("Rank")
-                        .IsUnique();
-
-                    b.ToTable("levels");
                 });
 
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.MarketDataPoint", b =>
@@ -909,45 +577,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                     b.ToTable("methodology_versions");
                 });
 
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.OrgUnit", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("parent_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("ParentId");
-
-                    b.ToTable("org_units");
-                });
-
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Question", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1034,6 +663,11 @@ namespace PeopleRise.Modules.JobReward.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("grade_id");
 
+                    b.Property<decimal>("HalfSpreadPct")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("half_spread_pct");
+
                     b.Property<Guid?>("JobFamilyId")
                         .HasColumnType("uuid")
                         .HasColumnName("job_family_id");
@@ -1062,6 +696,12 @@ namespace PeopleRise.Modules.JobReward.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("positioning_id");
 
+                    b.Property<string>("Provenance")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provenance");
+
                     b.Property<Guid?>("SourceSnapshotId")
                         .HasColumnType("uuid")
                         .HasColumnName("source_snapshot_id");
@@ -1077,10 +717,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("GradeId");
-
-                    b.HasIndex("JobFamilyId");
 
                     b.ToTable("salary_bands", t =>
                         {
@@ -1133,81 +769,24 @@ namespace PeopleRise.Modules.JobReward.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.BandPositioningPolicy", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.JobFamily", "JobFamily")
-                        .WithMany()
-                        .HasForeignKey("JobFamilyId");
-
-                    b.Navigation("JobFamily");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.EmployeeAssignment", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.JobPosition", "Position")
-                        .WithMany()
-                        .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Employee");
-
-                    b.Navigation("Position");
-                });
-
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.EmployeeCompensation", b =>
                 {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("PeopleRise.Modules.JobReward.Domain.SalaryImportBatch", "ImportBatch")
                         .WithMany()
                         .HasForeignKey("ImportBatchId");
-
-                    b.Navigation("Employee");
 
                     b.Navigation("ImportBatch");
                 });
 
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Evaluation", b =>
                 {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Employee", "EvaluatorEmployee")
-                        .WithMany()
-                        .HasForeignKey("EvaluatorEmployeeId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Job", "Job")
-                        .WithMany()
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("PeopleRise.Modules.JobReward.Domain.MethodologyVersion", "MethodologyVersion")
                         .WithMany()
                         .HasForeignKey("MethodologyVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Grade", "RecommendedGrade")
-                        .WithMany()
-                        .HasForeignKey("RecommendedGradeId");
-
-                    b.Navigation("EvaluatorEmployee");
-
-                    b.Navigation("Job");
-
                     b.Navigation("MethodologyVersion");
-
-                    b.Navigation("RecommendedGrade");
                 });
 
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.EvaluationAnswer", b =>
@@ -1267,68 +846,15 @@ namespace PeopleRise.Modules.JobReward.Migrations
                     b.Navigation("MethodologyVersion");
                 });
 
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Grade", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Level", "Level")
-                        .WithMany()
-                        .HasForeignKey("LevelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Level");
-                });
-
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.GradeMapping", b =>
                 {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Grade", "Grade")
-                        .WithMany()
-                        .HasForeignKey("GradeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("PeopleRise.Modules.JobReward.Domain.MethodologyVersion", "MethodologyVersion")
                         .WithMany("GradeMappings")
                         .HasForeignKey("MethodologyVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Grade");
-
                     b.Navigation("MethodologyVersion");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Job", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Grade", "Grade")
-                        .WithMany()
-                        .HasForeignKey("GradeId");
-
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.JobFamily", "JobFamily")
-                        .WithMany()
-                        .HasForeignKey("JobFamilyId");
-
-                    b.Navigation("Grade");
-
-                    b.Navigation("JobFamily");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.JobPosition", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Job", "Job")
-                        .WithMany()
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.OrgUnit", "OrgUnit")
-                        .WithMany()
-                        .HasForeignKey("OrgUnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Job");
-
-                    b.Navigation("OrgUnit");
                 });
 
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.MarketDataPoint", b =>
@@ -1353,15 +879,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                     b.Navigation("Methodology");
                 });
 
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.OrgUnit", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.OrgUnit", "Parent")
-                        .WithMany()
-                        .HasForeignKey("ParentId");
-
-                    b.Navigation("Parent");
-                });
-
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Question", b =>
                 {
                     b.HasOne("PeopleRise.Modules.JobReward.Domain.Factor", "Factor")
@@ -1371,23 +888,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                         .IsRequired();
 
                     b.Navigation("Factor");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.SalaryBand", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.Grade", "Grade")
-                        .WithMany()
-                        .HasForeignKey("GradeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.JobFamily", "JobFamily")
-                        .WithMany()
-                        .HasForeignKey("JobFamilyId");
-
-                    b.Navigation("Grade");
-
-                    b.Navigation("JobFamily");
                 });
 
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Factor", b =>

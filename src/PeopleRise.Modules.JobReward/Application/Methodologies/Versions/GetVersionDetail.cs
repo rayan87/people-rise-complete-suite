@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
@@ -9,7 +10,7 @@ namespace PeopleRise.Modules.JobReward.Application.Methodologies.Versions;
 public sealed record GetVersionDetailQuery(Guid VersionId);
 
 // Serves BOTH the authoring screen and the evaluation form (the questionnaire).
-internal sealed class GetVersionDetailHandler(JobRewardDbContext db)
+internal sealed class GetVersionDetailHandler(JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : IQueryHandler<GetVersionDetailQuery, Result<MethodologyVersionDetailDto>>
 {
     public async Task<Result<MethodologyVersionDetailDto>> Handle(GetVersionDetailQuery query, CancellationToken ct)
@@ -17,7 +18,7 @@ internal sealed class GetVersionDetailHandler(JobRewardDbContext db)
         var version = await db.MethodologyVersions
             .Include(v => v.Methodology)
             .Include(v => v.Factors!).ThenInclude(f => f.Questions!).ThenInclude(q => q.AnswerOptions)
-            .Include(v => v.GradeMappings!).ThenInclude(g => g.Grade)
+            .Include(v => v.GradeMappings!)
             .FirstOrDefaultAsync(v => v.Id == query.VersionId, ct);
 
         if (version is null)
@@ -82,12 +83,18 @@ internal sealed class GetVersionDetailHandler(JobRewardDbContext db)
             })
             .ToList();
 
+        // Grade lives in PeopleRise.Core - fetch codes there and zip in C# (two queries; Grade and
+        // GradeMapping are on separate DbContexts, so they can't be joined in one query any more).
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), ct);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
+        var gradeCodeById = gradesResult.Value.ToDictionary(g => g.Id, g => g.Code);
+
         var gradeMappingDtos = version.GradeMappings!
             .OrderBy(mapping => mapping.MinScore)
             .Select(mapping => new GradeMappingDto(
                 mapping.Id,
                 mapping.GradeId,
-                mapping.Grade!.Code,
+                gradeCodeById.GetValueOrDefault(mapping.GradeId),
                 mapping.MinScore,
                 mapping.MaxScore))
             .ToList();

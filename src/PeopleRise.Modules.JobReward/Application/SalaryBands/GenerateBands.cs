@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -8,11 +9,13 @@ using PeopleRise.SharedKernel;
 namespace PeopleRise.Modules.JobReward.Application.SalaryBands;
 
 /// <summary>The Salary Builder's core action: build a band for every grade from a base midpoint and a
-/// grade-progression rate. Spread is a fixed ±25% of midpoint (see SalaryBand); overlap per grade is
-/// derived from consecutive midpoints. Upserts (updates existing grade bands).</summary>
+/// grade-progression rate. Spread uses each band's own half-spread (25% default, see SalaryBand);
+/// overlap per grade is derived from consecutive midpoints. Upserts (updates existing grade bands).
+/// Provenance Designed - this is Compensation computing the band, not a manual entry.</summary>
 public sealed record GenerateBandsCommand(decimal BaseMidpoint, decimal ProgressionPct, string Currency, DateOnly EffectiveDate);
 
-internal sealed class GenerateBandsHandler(JobRewardDbContext db)
+internal sealed class GenerateBandsHandler(
+    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<GenerateBandsCommand, Result<IReadOnlyList<SalaryBandRowDto>>>
 {
     public async Task<Result<IReadOnlyList<SalaryBandRowDto>>> Handle(GenerateBandsCommand cmd, CancellationToken ct)
@@ -27,9 +30,9 @@ internal sealed class GenerateBandsHandler(JobRewardDbContext db)
             return Error.Validation("Currency is required.");
         }
 
-        var grades = await db.Grades
-            .OrderBy(g => g.Rank)
-            .ToListAsync(ct);
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), ct);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
+        var grades = gradesResult.Value.OrderBy(g => g.Rank).ToList();
 
         if (grades.Count == 0)
         {
@@ -51,13 +54,13 @@ internal sealed class GenerateBandsHandler(JobRewardDbContext db)
                 band.Update(midpoint, previousMidpoint, cmd.Currency, cmd.EffectiveDate);
             else
                 db.SalaryBands.Add(SalaryBand.Create(
-                    grades[i].Id, cmd.Currency, midpoint, previousMidpoint, cmd.EffectiveDate));
+                    grades[i].Id, cmd.Currency, midpoint, previousMidpoint, cmd.EffectiveDate, BandProvenance.Designed));
 
             previousMidpoint = midpoint;
         }
 
         await db.SaveChangesAsync(ct);
-        var rows = await SalaryBandProjections.RowsAsync(db, ct);
+        var rows = await SalaryBandProjections.RowsAsync(db, listGrades, ct);
         return Result<IReadOnlyList<SalaryBandRowDto>>.Success(rows);
     }
 }

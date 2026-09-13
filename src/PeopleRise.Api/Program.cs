@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using PeopleRise.Core;
 using PeopleRise.ControlPlane;
 using PeopleRise.Modules.JobReward;
 using PeopleRise.Tenancy;
@@ -7,9 +8,10 @@ using PeopleRise.Tenancy;
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-builder.Services.AddDbContext<ControlPlaneDbContext>(options => 
+builder.Services.AddDbContext<ControlPlaneDbContext>(options =>
     options.UseNpgsql(configuration.GetConnectionString("ControlPlane")));
 builder.Services.AddTenancy(configuration.GetConnectionString("TenantTemplate")!);
+builder.Services.AddCoreModule();
 builder.Services.AddJobRewardModule();
 
 // DEV: allow the Angular dev server to call the API with the dev auth headers.
@@ -73,13 +75,15 @@ app.MapPost("/admin/tenants", async (CreateTenant input, ICurrentUser user,
 
     var dbName = $"pr_tenant_{Guid.NewGuid():N}";
     await Provisioning.CreateDatabaseAsync(configuration.GetConnectionString("Maintenance")!, dbName);
-    await JobRewardModule.EnsureSchemaAsync(factory.ForDatabase(dbName));
+    var newTenantConn = factory.ForDatabase(dbName);
+    await CoreModule.EnsureSchemaAsync(newTenantConn);   // core migrates first - modules may depend on its shape
+    await JobRewardModule.EnsureSchemaAsync(newTenantConn);
 
-    var tenant = new Tenant 
-    { 
-        Name = input.Name, 
-        DbName = dbName, 
-        OwnerType = input.OwnerType 
+    var tenant = new Tenant
+    {
+        Name = input.Name,
+        DbName = dbName,
+        OwnerType = input.OwnerType
     };
 
     cp.Tenants.Add(tenant);
@@ -119,8 +123,10 @@ app.MapPost("/admin/demo/el-delta", async (ICurrentUser user, ControlPlaneDbCont
     var dbName = $"pr_tenant_{Guid.NewGuid():N}";
     await Provisioning.CreateDatabaseAsync(configuration.GetConnectionString("Maintenance")!, dbName);
     var conn = factory.ForDatabase(dbName);
+    await CoreModule.EnsureSchemaAsync(conn);
     await JobRewardModule.EnsureSchemaAsync(conn);
-    var summary = await JobRewardModule.SeedElDeltaDemoAsync(conn);
+    var coreSeed = await CoreModule.SeedElDeltaDemoAsync(conn);   // levels/families/grades/jobs first
+    var summary = await JobRewardModule.SeedElDeltaDemoAsync(conn, coreSeed);   // methodology/evaluations/bands
 
     var tenant = new Tenant { Name = "El-Delta", DbName = dbName, OwnerType = OwnerType.Client };
     cp.Tenants.Add(tenant);
@@ -148,7 +154,9 @@ app.MapGet("/admin/migrate-dbs", async (ControlPlaneDbContext controlPlaneDb,
     {
         try
         {
-            await JobRewardModule.EnsureSchemaAsync(connectionFactory.ForDatabase(tenant.DbName));
+            var tenantConn = connectionFactory.ForDatabase(tenant.DbName);
+            await CoreModule.EnsureSchemaAsync(tenantConn);   // core migrates first
+            await JobRewardModule.EnsureSchemaAsync(tenantConn);
             results.Add(new { tenant.Name, tenant.DbName, success = true, error = (string?)null });
         }
         catch (Exception ex)
@@ -160,6 +168,7 @@ app.MapGet("/admin/migrate-dbs", async (ControlPlaneDbContext controlPlaneDb,
     return Results.Ok(results);
 });
 
+app.MapCoreEndpoints();
 app.MapJobRewardEndpoints();
 
 app.Run();
@@ -202,7 +211,9 @@ static class DevBootstrap
             var maintenance = app.Configuration.GetConnectionString("Maintenance")!;
             var dbName = $"pr_tenant_{Guid.NewGuid():N}";
             await Provisioning.CreateDatabaseAsync(maintenance, dbName);
-            await JobRewardModule.EnsureSchemaAsync(factory.ForDatabase(dbName));
+            var devTenantConn = factory.ForDatabase(dbName);
+            await CoreModule.EnsureSchemaAsync(devTenantConn);   // core migrates first
+            await JobRewardModule.EnsureSchemaAsync(devTenantConn);
 
             var tenant = new Tenant 
             { 

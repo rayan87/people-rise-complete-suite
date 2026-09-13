@@ -1,0 +1,40 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using PeopleRise.Core.Infrastructure;
+using PeopleRise.SharedKernel;
+
+namespace PeopleRise.Core.Application.Levels;
+
+public sealed record UpdateLevelCommand(Guid Id, string Code, string NameEn, string? NameAr, int Rank);
+
+internal sealed class UpdateLevelHandler(CoreDbContext db)
+    : ICommandHandler<UpdateLevelCommand, Result<LevelDto>>
+{
+    public async Task<Result<LevelDto>> Handle(UpdateLevelCommand cmd, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(cmd.NameEn))
+        {
+            return Error.Validation("English name is required.");
+        }
+
+        var level = await db.Levels.FindAsync(cmd.Id, ct);
+
+        if (level is null)
+        {
+            return Error.NotFound("Level not found.");
+        }
+
+        level.Update(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank);
+        await db.SaveChangesAsync(ct);
+        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank);
+    }
+}
+
+internal static class UpdateLevelEndpoint
+{
+    public static void MapUpdateLevelEndpoint(this RouteGroupBuilder group)
+    {
+        group.MapPut("/{id:guid}", async (Guid id, UpdateLevelCommand cmd, UpdateLevelHandler h, CancellationToken ct) =>
+            (await h.Handle(cmd with { Id = id }, ct)).ToHttp());
+    }
+}

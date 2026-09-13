@@ -4,18 +4,11 @@ using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Infrastructure;
 
-/// <summary>Per-tenant database for the Job & Reward Design trio (the Phase 1 schema).</summary>
+/// <summary>Per-tenant database for Job Evaluation + Compensation (core entities - Organization,
+/// Structure, Ladder, Establishment, Roster - live in PeopleRise.Core's CoreDbContext; this context
+/// never references them, per LOCKED RULE 4).</summary>
 internal class JobRewardDbContext(DbContextOptions<JobRewardDbContext> options) : DbContext(options)
 {
-    // Structure
-    public DbSet<OrgUnit> OrgUnits => Set<OrgUnit>();
-    public DbSet<Level> Levels => Set<Level>();
-    public DbSet<JobFamily> JobFamilies => Set<JobFamily>();
-    public DbSet<Grade> Grades => Set<Grade>();
-    public DbSet<Job> Jobs => Set<Job>();
-    public DbSet<JobPosition> JobPositions => Set<JobPosition>();
-    public DbSet<Employee> Employees => Set<Employee>();
-    public DbSet<EmployeeAssignment> EmployeeAssignments => Set<EmployeeAssignment>();
     // Evaluation
     public DbSet<Methodology> Methodologies => Set<Methodology>();
     public DbSet<MethodologyVersion> MethodologyVersions => Set<MethodologyVersion>();
@@ -38,30 +31,10 @@ internal class JobRewardDbContext(DbContextOptions<JobRewardDbContext> options) 
     {
         base.OnModelCreating(b);
 
-        // self-reference
-        b.Entity<OrgUnit>().HasOne(x => x.Parent).WithMany().HasForeignKey(x => x.ParentId);
-
-        // disambiguate the (single) Evaluation -> Employee navigation; ApprovedBy is a bare column
-        b.Entity<Evaluation>().HasOne(e => e.EvaluatorEmployee).WithMany()
-            .HasForeignKey(e => e.EvaluatorEmployeeId).OnDelete(DeleteBehavior.Restrict);
-
         // uniqueness
-        b.Entity<Level>().HasIndex(x => x.Code).IsUnique();
-        b.Entity<Level>().HasIndex(x => x.Rank).IsUnique();
-        b.Entity<JobFamily>().HasIndex(x => x.Code).IsUnique();
-        b.Entity<Grade>().HasIndex(x => x.Code).IsUnique();
-        b.Entity<Grade>().HasIndex(x => x.Rank).IsUnique();
-        b.Entity<Job>().HasIndex(x => x.Code).IsUnique();
-        b.Entity<JobPosition>().HasIndex(x => x.Code).IsUnique();
-        b.Entity<OrgUnit>().HasIndex(x => x.Code).IsUnique();
-        b.Entity<Employee>().HasIndex(x => x.EmployeeNo).IsUnique();
         b.Entity<MethodologyVersion>().HasIndex(x => new { x.MethodologyId, x.VersionNo }).IsUnique();
         b.Entity<GradeMapping>().HasIndex(x => new { x.MethodologyVersionId, x.GradeId }).IsUnique();
         b.Entity<EvaluationAnswer>().HasIndex(x => new { x.EvaluationId, x.QuestionId, x.AnswerOptionId }).IsUnique();
-
-        // at most one OPEN assignment per position (partial unique index)
-        b.Entity<EmployeeAssignment>().HasIndex(x => x.PositionId)
-            .IsUnique().HasFilter("end_date IS NULL");
 
         // mirror the DDL's check constraints
         b.Entity<SalaryBand>().ToTable(t =>

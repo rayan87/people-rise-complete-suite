@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -9,7 +10,8 @@ namespace PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
 
 public sealed record AddGradeMappingCommand(Guid VersionId, Guid GradeId, int? MinScore, int? MaxScore);
 
-internal sealed class AddGradeMappingHandler(JobRewardDbContext db)
+internal sealed class AddGradeMappingHandler(
+    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<AddGradeMappingCommand, Result<GradeMappingDto>>
 {
     public async Task<Result<GradeMappingDto>> Handle(AddGradeMappingCommand cmd, CancellationToken ct)
@@ -27,7 +29,10 @@ internal sealed class AddGradeMappingHandler(JobRewardDbContext db)
             return Error.Validation("maxScore must be >= minScore.");
         }
 
-        if (!await db.Grades.AnyAsync(g => g.Id == cmd.GradeId, ct))
+        // Grade lives in PeopleRise.Core.
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), ct);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
+        if (!gradesResult.Value.Any(g => g.Id == cmd.GradeId))
         {
             return Error.NotFound("Grade not found.");
         }

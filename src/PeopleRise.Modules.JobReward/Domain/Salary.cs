@@ -31,26 +31,25 @@ internal class MarketDataPoint : ImmutableEntity
 
 internal class BandPositioningPolicy : Entity   // per family: lead / match / lag
 {
-    public Guid? JobFamilyId { get; set; }
-    public JobFamily? JobFamily { get; set; }
+    public Guid? JobFamilyId { get; set; }   // id only - JobFamily lives in PeopleRise.Core
     public Posture Posture { get; set; } = Posture.Match;
     public int TargetPercentile { get; set; } = 50;
     public DateOnly EffectiveDate { get; set; }
 }
 
-internal class SalaryBand : Entity   // min = midpoint-25%, max = midpoint+25% (fixed); spread & overlap are derived outputs
+internal class SalaryBand : Entity   // min/max derived from midpoint +/- HalfSpreadPct; spread & overlap are derived outputs
 {
-    private const decimal FixedHalfSpreadPct = 25m;   // CLAUDE.md: min = midpoint-25%, max = midpoint+25%; not user-editable
+    private const decimal DefaultHalfSpreadPct = 25m;   // Decision Log: editable per band, defaults to 25% (not hardcoded)
 
-    public Guid GradeId { get; private set; }
-    public Grade? Grade { get; private set; }
-    public Guid? JobFamilyId { get; private set; }
-    public JobFamily? JobFamily { get; private set; }
+    public Guid GradeId { get; private set; }   // id only - Grade lives in PeopleRise.Core
+    public Guid? JobFamilyId { get; private set; }   // id only - JobFamily lives in PeopleRise.Core
     public string Currency { get; private set; } = "";
     public decimal Midpoint { get; private set; }
+    public decimal HalfSpreadPct { get; private set; } = DefaultHalfSpreadPct;   // stored, editable (Core Spec §9 / Decision Log §6)
     public decimal MinAmount { get; private set; }
     public decimal MaxAmount { get; private set; }
     public decimal? OverlapPct { get; private set; }   // (this midpoint / previous grade's midpoint) - 1; null for the first grade
+    public BandProvenance Provenance { get; private set; }
     public Guid? SourceSnapshotId { get; private set; }
     public Guid? PositioningId { get; private set; }
     public DateOnly EffectiveDate { get; private set; }
@@ -66,33 +65,38 @@ internal class SalaryBand : Entity   // min = midpoint-25%, max = midpoint+25% (
         decimal midpoint,
         decimal? previousGradeMidpoint,
         DateOnly effectiveDate,
+        BandProvenance provenance,
         BandStatus status = BandStatus.Published,
-        Guid? jobFamilyId = null)
+        Guid? jobFamilyId = null,
+        decimal halfSpreadPct = DefaultHalfSpreadPct)
     {
         var band = new SalaryBand
         {
             GradeId = gradeId, JobFamilyId = jobFamilyId, Currency = currency,
-            EffectiveDate = effectiveDate, Status = status,
+            EffectiveDate = effectiveDate, Status = status, Provenance = provenance,
         };
-        band.ApplyMidpoint(midpoint, previousGradeMidpoint);
+        band.ApplyMidpoint(midpoint, previousGradeMidpoint, halfSpreadPct);
         return band;
     }
 
-    /// <summary>Re-price the band: min/max/overlap are always derived from midpoint (never set directly).</summary>
-    public void Update(decimal midpoint, decimal? previousGradeMidpoint, string currency, DateOnly effectiveDate)
+    /// <summary>Re-price the band: min/max/overlap are always derived from midpoint (never set
+    /// directly). Provenance is never touched here - a re-price isn't a new source (see Update's
+    /// callers); a genuinely new source means a new record, not an in-place change.</summary>
+    public void Update(decimal midpoint, decimal? previousGradeMidpoint, string currency, DateOnly effectiveDate, decimal? halfSpreadPct = null)
     {
         Currency = currency;
         EffectiveDate = effectiveDate;
-        ApplyMidpoint(midpoint, previousGradeMidpoint);
+        ApplyMidpoint(midpoint, previousGradeMidpoint, halfSpreadPct ?? HalfSpreadPct);
     }
 
     public void Retire() => Status = BandStatus.Retired;
 
-    private void ApplyMidpoint(decimal midpoint, decimal? previousGradeMidpoint)
+    private void ApplyMidpoint(decimal midpoint, decimal? previousGradeMidpoint, decimal halfSpreadPct)
     {
         Midpoint = midpoint;
+        HalfSpreadPct = halfSpreadPct;
 
-        var half = FixedHalfSpreadPct / 100m;
+        var half = halfSpreadPct / 100m;
         MinAmount = decimal.Round(midpoint * (1m - half), 4);
         MaxAmount = decimal.Round(midpoint * (1m + half), 4);
 
@@ -112,8 +116,7 @@ internal class SalaryImportBatch : ImmutableEntity
 
 internal class EmployeeCompensation : ImmutableEntity   // integrated-only: enables compa-ratio + equity
 {
-    public Guid EmployeeId { get; set; }
-    public Employee? Employee { get; set; }
+    public Guid EmployeeId { get; set; }   // id only - Employee lives in PeopleRise.Core
     public decimal BaseSalary { get; set; }
     public string Currency { get; set; } = "";
     public DateOnly EffectiveDate { get; set; }

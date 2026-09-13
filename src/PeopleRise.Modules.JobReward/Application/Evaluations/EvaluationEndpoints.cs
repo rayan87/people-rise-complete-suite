@@ -15,7 +15,5 @@ internal static class EvaluationEndpoints
         group.MapSubmitAnswersEndpoint();
         group.MapGetEvaluationEndpoint();
         group.MapApproveEvaluationEndpoint();
-        group.MapPost("/calibrate", async (CalibrateQuery query, CalibrateHandler h, CancellationToken ct) =>
-            (await h.Handle(query, ct)).ToHttp());
     }
 }

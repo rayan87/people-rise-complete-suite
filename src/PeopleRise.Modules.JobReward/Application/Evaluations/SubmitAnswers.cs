@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
+using PeopleRise.Core.Application.Jobs;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -9,7 +11,10 @@ namespace PeopleRise.Modules.JobReward.Application.Evaluations;
 
 public sealed record SubmitAnswersCommand(Guid EvaluationId, IReadOnlyList<AnswerSelection> Answers);
 
-internal sealed class SubmitAnswersHandler(JobRewardDbContext db, ScoringService scoring)
+internal sealed class SubmitAnswersHandler(
+    JobRewardDbContext db, ScoringService scoring,
+    IQueryHandler<GetJobQuery, Result<JobDto>> getJob,
+    IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<SubmitAnswersCommand, Result<EvaluationResultDto>>
 {
     public async Task<Result<EvaluationResultDto>> Handle(SubmitAnswersCommand cmd, CancellationToken ct)
@@ -52,7 +57,7 @@ internal sealed class SubmitAnswersHandler(JobRewardDbContext db, ScoringService
         evaluation.Submit(score.Total, gradeId);   // domain transition (eval is Draft, validated above)
         await db.SaveChangesAsync(ct);
 
-        return (await EvaluationProjections.BuildAsync(db, evaluation.Id, ct))!;
+        return (await EvaluationProjections.BuildAsync(db, getJob, listGrades, evaluation.Id, ct))!;
     }
 }
 

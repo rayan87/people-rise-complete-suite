@@ -8,9 +8,8 @@ internal class GradeMapping : Entity   // score range -> grade, per version
 
     public MethodologyVersion? MethodologyVersion { get; private set; }
 
+    // Id only - Grade lives in PeopleRise.Core's CoreDbContext (see the class-level note on Evaluation).
     public Guid GradeId { get; private set; }
-
-    public Grade? Grade { get; private set; }
 
     /// <summary>Null until the score range is set (grades can be assigned to a version before their
     /// range is decided - see MethodologyVersion.AssignGrade / SetGradeMappingRange / AutoAssignGradeRanges).</summary>

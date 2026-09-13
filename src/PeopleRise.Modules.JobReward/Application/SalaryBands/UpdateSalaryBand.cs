@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.SalaryBands;
 
-public sealed record UpdateSalaryBandCommand(Guid BandId, string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate);
+public sealed record UpdateSalaryBandCommand(Guid BandId, string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate, decimal? HalfSpreadPct = null);
 
-internal sealed class UpdateSalaryBandHandler(JobRewardDbContext db)
+internal sealed class UpdateSalaryBandHandler(
+    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<UpdateSalaryBandCommand, Result<SalaryBandRowDto>>
 {
     public async Task<Result<SalaryBandRowDto>> Handle(UpdateSalaryBandCommand cmd, CancellationToken cancellationToken)
@@ -31,11 +33,10 @@ internal sealed class UpdateSalaryBandHandler(JobRewardDbContext db)
             return Error.NotFound("Salary band not found.");
         }
 
-        var rank = await db.Grades
-            .Where(g => g.Id == band.GradeId)
-            .Select(g => g.Rank)
-            .FirstAsync(cancellationToken);
-        var previousMidpoint = await SalaryBandProjections.PreviousMidpointAsync(db, rank, cancellationToken);
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), cancellationToken);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
+        var rank = gradesResult.Value.First(g => g.Id == band.GradeId).Rank;
+        var previousMidpoint = await SalaryBandProjections.PreviousMidpointAsync(db, listGrades, rank, cancellationToken);
 
         if (cmd.OverlapPct is not null && previousMidpoint is null)
         {
@@ -49,10 +50,10 @@ internal sealed class UpdateSalaryBandHandler(JobRewardDbContext db)
             return Error.Validation("Midpoint must be greater than zero.");
         }
 
-        band.Update(midpoint, previousMidpoint, cmd.Currency, cmd.EffectiveDate);
-        await SalaryBandProjections.CascadeMidpointsAsync(db, rank, midpoint, cancellationToken);
+        band.Update(midpoint, previousMidpoint, cmd.Currency, cmd.EffectiveDate, cmd.HalfSpreadPct);
+        await SalaryBandProjections.CascadeMidpointsAsync(db, listGrades, rank, midpoint, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        return (await SalaryBandProjections.RowForGradeAsync(db, band.GradeId, cancellationToken))!;
+        return (await SalaryBandProjections.RowForGradeAsync(db, listGrades, band.GradeId, cancellationToken))!;
     }
 }
 

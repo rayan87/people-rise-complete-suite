@@ -2,6 +2,7 @@
   <Project Path="src/PeopleRise.SharedKernel/PeopleRise.SharedKernel.csproj" />
   <Project Path="src/PeopleRise.ControlPlane/PeopleRise.ControlPlane.csproj" />
   <Project Path="src/PeopleRise.Tenancy/PeopleRise.Tenancy.csproj" />
+  <Project Path="src/PeopleRise.Core/PeopleRise.Core.csproj" />
   <Project Path="src/PeopleRise.Modules.JobReward/PeopleRise.Modules.JobReward.csproj" />
   <Project Path="src/PeopleRise.Api/PeopleRise.Api.csproj" />
 </Solution>

@@ -1,0 +1,133 @@
+using PeopleRise.SharedKernel;
+
+namespace PeopleRise.Core.Domain;
+
+// Entities are INTERNAL: other modules physically cannot reference them. The boundary is compiler-enforced.
+// Human-facing names are bilingual: *En is required (when the field is required), *Ar is optional.
+// Codes stay language-neutral. Entities not yet driven by any handler keep open setters.
+
+internal class OrgUnit : Entity
+{
+    public Guid? ParentId { get; set; }
+    public OrgUnit? Parent { get; set; }
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+}
+
+internal class Level : Entity   // the five El-Delta levels
+{
+    public string Code { get; private set; } = "";
+    public string NameEn { get; private set; } = "";
+    public string? NameAr { get; private set; }
+    public int Rank { get; private set; }
+
+    private Level() { }   // EF
+
+    public static Level Create(string code, string nameEn, string? nameAr, int rank) =>
+        new() { Code = code, NameEn = nameEn, NameAr = nameAr, Rank = rank };
+
+    public void Update(string code, string nameEn, string? nameAr, int rank)
+    { Code = code; NameEn = nameEn; NameAr = nameAr; Rank = rank; }
+}
+
+internal class JobFamily : Entity   // horizontal cut; nullable on Job, added in the design phase
+{
+    public string Code { get; private set; } = "";
+    public string NameEn { get; private set; } = "";
+    public string? NameAr { get; private set; }
+
+    private JobFamily() { }   // EF
+
+    public static JobFamily Create(string code, string nameEn, string? nameAr) =>
+        new() { Code = code, NameEn = nameEn, NameAr = nameAr };
+
+    public void Update(string code, string nameEn, string? nameAr)
+    { Code = code; NameEn = nameEn; NameAr = nameAr; }
+}
+
+internal class Grade : Entity
+{
+    public string Code { get; private set; } = "";
+    public string NameEn { get; private set; } = "";
+    public string? NameAr { get; private set; }
+    public int Rank { get; private set; }
+    public Guid LevelId { get; private set; }
+    public Level? Level { get; private set; }
+
+    private Grade() { }   // EF
+
+    public static Grade Create(string code, string nameEn, string? nameAr, int rank, Guid levelId) =>
+        new() { Code = code, NameEn = nameEn, NameAr = nameAr, Rank = rank, LevelId = levelId };
+
+    public void Update(string code, string nameEn, string? nameAr, int rank, Guid levelId)
+    { Code = code; NameEn = nameEn; NameAr = nameAr; Rank = rank; LevelId = levelId; }
+}
+
+internal class Job : Entity   // a role DEFINITION - the thing you evaluate
+{
+    public string Code { get; private set; } = "";
+    public string TitleEn { get; private set; } = "";
+    public string? TitleAr { get; private set; }
+    public string? DescriptionEn { get; private set; }
+    public string? DescriptionAr { get; private set; }
+    public Guid? JobFamilyId { get; private set; }     // nullable: job works before families exist
+    public JobFamily? JobFamily { get; private set; }
+    public Guid? GradeId { get; private set; }          // nullable: set once graded
+    public Grade? Grade { get; private set; }           // level flows transitively via Grade.LevelId
+    public GradeSource? GradeSource { get; private set; }   // null until graded; moves WITH GradeId
+    public JobStatus Status { get; private set; } = JobStatus.Draft;
+
+    private Job() { }   // EF
+
+    public static Job Create(string code, string titleEn, string? titleAr,
+                             string? descriptionEn, string? descriptionAr, Guid? jobFamilyId) =>
+        new()
+        {
+            Code = code, TitleEn = titleEn, TitleAr = titleAr,
+            DescriptionEn = descriptionEn, DescriptionAr = descriptionAr, JobFamilyId = jobFamilyId,
+        };
+
+    public void Update(string code, string titleEn, string? titleAr,
+                       string? descriptionEn, string? descriptionAr, Guid? jobFamilyId)
+    { Code = code; TitleEn = titleEn; TitleAr = titleAr;
+      DescriptionEn = descriptionEn; DescriptionAr = descriptionAr; JobFamilyId = jobFamilyId; }
+
+    /// <summary>The ONLY way a job gets/changes a grade. Both the evaluation flow and the direct-assign
+    /// flow call this. GradeId + GradeSource always move together.</summary>
+    public void AssignGrade(Guid gradeId, GradeSource source)
+    {
+        if (Status == JobStatus.Archived)
+            throw new DomainStateException("Cannot grade an archived job.");
+        GradeId = gradeId;
+        GradeSource = source;
+        Status = JobStatus.Active;   // Draft -> Active on first grading; Active -> Active on re-grade
+    }
+
+    public void Archive() => Status = JobStatus.Archived;   // grade preserved for history; do NOT clear it
+}
+
+internal class JobPosition : Entity   // a SEAT - the establishment counts these
+{
+    public Guid JobId { get; set; }
+    public Job? Job { get; set; }
+    public Guid OrgUnitId { get; set; }
+    public OrgUnit? OrgUnit { get; set; }
+    public string Code { get; set; } = "";
+    public PositionStatus Status { get; set; } = PositionStatus.ApprovedVacant;
+}
+
+internal class Employee : Entity   // a PERSON - the one you pay
+{
+    public string EmployeeNo { get; set; } = "";
+    public string FullName { get; set; } = "";
+}
+
+internal class EmployeeAssignment : Entity   // who fills which seat over time
+{
+    public Guid EmployeeId { get; set; }
+    public Employee? Employee { get; set; }
+    public Guid PositionId { get; set; }
+    public JobPosition? Position { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }   // null = current
+}

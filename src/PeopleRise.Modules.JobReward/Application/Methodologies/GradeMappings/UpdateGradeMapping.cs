@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -9,7 +10,8 @@ namespace PeopleRise.Modules.JobReward.Application.Methodologies.GradeMappings;
 
 public sealed record UpdateGradeMappingCommand(Guid VersionId, Guid MappingId, Guid GradeId, int? MinScore, int? MaxScore);
 
-internal sealed class UpdateGradeMappingHandler(JobRewardDbContext db)
+internal sealed class UpdateGradeMappingHandler(
+    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<UpdateGradeMappingCommand, Result<GradeMappingDto>>
 {
     public async Task<Result<GradeMappingDto>> Handle(UpdateGradeMappingCommand cmd, CancellationToken ct)
@@ -23,9 +25,11 @@ internal sealed class UpdateGradeMappingHandler(JobRewardDbContext db)
             return Error.NotFound("Methodology version not found.");
         }
 
-        var gradeExists = await db.Grades.AnyAsync(grade => grade.Id == cmd.GradeId);
+        // Grade lives in PeopleRise.Core.
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), ct);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
 
-        if (!gradeExists)
+        if (!gradesResult.Value.Any(grade => grade.Id == cmd.GradeId))
         {
             return Error.NotFound("Grade not found.");
         }

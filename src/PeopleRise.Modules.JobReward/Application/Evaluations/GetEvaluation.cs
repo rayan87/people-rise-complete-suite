@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using PeopleRise.Core.Application.Grades;
+using PeopleRise.Core.Application.Jobs;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
@@ -7,12 +9,15 @@ namespace PeopleRise.Modules.JobReward.Application.Evaluations;
 
 public sealed record GetEvaluationQuery(Guid Id);
 
-internal sealed class GetEvaluationHandler(JobRewardDbContext db)
+internal sealed class GetEvaluationHandler(
+    JobRewardDbContext db,
+    IQueryHandler<GetJobQuery, Result<JobDto>> getJob,
+    IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : IQueryHandler<GetEvaluationQuery, Result<EvaluationResultDto>>
 {
     public async Task<Result<EvaluationResultDto>> Handle(GetEvaluationQuery query, CancellationToken ct)
     {
-        var result = await EvaluationProjections.BuildAsync(db, query.Id, ct);
+        var result = await EvaluationProjections.BuildAsync(db, getJob, listGrades, query.Id, ct);
         return result is null ? Error.NotFound("Evaluation not found.") : result;
     }
 }

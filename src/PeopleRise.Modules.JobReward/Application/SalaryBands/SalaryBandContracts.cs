@@ -7,10 +7,12 @@ public record SalaryBandRowDto(
 
 public record SalaryBandInfo(
     Guid Id, string Currency, decimal MinAmount, decimal Midpoint, decimal MaxAmount,
-    decimal SpreadPct, decimal? OverlapPct, DateOnly EffectiveDate, string Status);
+    decimal HalfSpreadPct, decimal SpreadPct, decimal? OverlapPct, DateOnly EffectiveDate, string Status,
+    string Provenance);
 
 // Request bodies. Provide exactly one of Midpoint/OverlapPct — the other is derived from the
 // previous grade's midpoint (OverlapPct is unusable for the first grade; leave it null there).
-public record CreateSalaryBandRequest(Guid GradeId, string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate);
-public record UpdateSalaryBandRequest(string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate);
+// HalfSpreadPct defaults to 25% when omitted (Core Spec §9: stored per band, editable).
+public record CreateSalaryBandRequest(Guid GradeId, string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate, decimal? HalfSpreadPct = null);
+public record UpdateSalaryBandRequest(string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate, decimal? HalfSpreadPct = null);
 public record GenerateBandsRequest(decimal BaseMidpoint, decimal ProgressionPct, string Currency, DateOnly EffectiveDate);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Application.Methodologies.Versions;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
@@ -14,7 +15,9 @@ public sealed record ImportMethodologyVersionCommand(Guid MethodologyId, string?
 
 // Import always creates a NEW Draft version - it never edits an existing one.
 // Publishing (making it the one evaluations are scored against) stays a separate, explicit step.
-internal sealed class ImportMethodologyVersionHandler(JobRewardDbContext db, GetVersionDetailHandler getVersionDetail)
+internal sealed class ImportMethodologyVersionHandler(
+    JobRewardDbContext db, GetVersionDetailHandler getVersionDetail,
+    IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<ImportMethodologyVersionCommand, Result<MethodologyVersionDetailDto>>
 {
     public async Task<Result<MethodologyVersionDetailDto>> Handle(ImportMethodologyVersionCommand cmd, CancellationToken ct)
@@ -33,10 +36,13 @@ internal sealed class ImportMethodologyVersionHandler(JobRewardDbContext db, Get
 
         var workbook = parsed.Value;
 
+        // Grade lives in PeopleRise.Core - resolve grade codes to ids via its public contract.
         var gradeCodes = workbook.GradeMappings.Select(g => g.GradeCode).Distinct().ToList();
-        var gradeIdsByCode = await db.Grades
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), ct);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
+        var gradeIdsByCode = gradesResult.Value
             .Where(g => gradeCodes.Contains(g.Code))
-            .ToDictionaryAsync(g => g.Code, g => g.Id, ct);
+            .ToDictionary(g => g.Code, g => g.Id);
 
         var missingGradeCodes = gradeCodes.Where(c => !gradeIdsByCode.ContainsKey(c)).ToList();
 

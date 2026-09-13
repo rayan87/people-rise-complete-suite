@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Grades;
 using PeopleRise.Modules.JobReward.Domain;
 using PeopleRise.Modules.JobReward.Infrastructure;
 using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.SalaryBands;
 
-public sealed record CreateSalaryBandCommand(Guid GradeId, string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate);
+// Provenance ManuallyEntered - this is a direct entry through the Salary Builder's own form, not
+// a Compensation-computed band (see GenerateBands for that path, provenance Designed).
+public sealed record CreateSalaryBandCommand(Guid GradeId, string Currency, decimal? Midpoint, decimal? OverlapPct, DateOnly EffectiveDate, decimal? HalfSpreadPct = null);
 
-internal sealed class CreateSalaryBandHandler(JobRewardDbContext db)
+internal sealed class CreateSalaryBandHandler(
+    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
     : ICommandHandler<CreateSalaryBandCommand, Result<SalaryBandRowDto>>
 {
     public async Task<Result<SalaryBandRowDto>> Handle(CreateSalaryBandCommand cmd, CancellationToken cancellationToken)
@@ -24,7 +28,9 @@ internal sealed class CreateSalaryBandHandler(JobRewardDbContext db)
             return Error.Validation("Provide exactly one of Midpoint or OverlapPct.");
         }
 
-        var grade = await db.Grades.FirstOrDefaultAsync(g => g.Id == cmd.GradeId, cancellationToken);
+        var gradesResult = await listGrades.Handle(new ListGradesQuery(), cancellationToken);
+        if (gradesResult.IsFailure) return gradesResult.Error!;
+        var grade = gradesResult.Value.FirstOrDefault(g => g.Id == cmd.GradeId);
         if (grade is null)
         {
             return Error.NotFound("Grade not found.");
@@ -35,7 +41,7 @@ internal sealed class CreateSalaryBandHandler(JobRewardDbContext db)
             return Error.Conflict("This grade already has a band; update it instead.");
         }
 
-        var previousMidpoint = await SalaryBandProjections.PreviousMidpointAsync(db, grade.Rank, cancellationToken);
+        var previousMidpoint = await SalaryBandProjections.PreviousMidpointAsync(db, listGrades, grade.Rank, cancellationToken);
 
         if (cmd.OverlapPct is not null && previousMidpoint is null)
         {
@@ -49,16 +55,14 @@ internal sealed class CreateSalaryBandHandler(JobRewardDbContext db)
             return Error.Validation("Midpoint must be greater than zero.");
         }
 
-        var salaryBand = SalaryBand.Create(cmd.GradeId,
-            cmd.Currency,
-            midpoint,
-            previousMidpoint,
-            cmd.EffectiveDate);
+        var salaryBand = cmd.HalfSpreadPct is { } halfSpread
+            ? SalaryBand.Create(cmd.GradeId, cmd.Currency, midpoint, previousMidpoint, cmd.EffectiveDate, BandProvenance.ManuallyEntered, halfSpreadPct: halfSpread)
+            : SalaryBand.Create(cmd.GradeId, cmd.Currency, midpoint, previousMidpoint, cmd.EffectiveDate, BandProvenance.ManuallyEntered);
 
         db.SalaryBands.Add(salaryBand);
-        await SalaryBandProjections.CascadeMidpointsAsync(db, grade.Rank, midpoint, cancellationToken);
+        await SalaryBandProjections.CascadeMidpointsAsync(db, listGrades, grade.Rank, midpoint, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        return (await SalaryBandProjections.RowForGradeAsync(db, cmd.GradeId, cancellationToken))!;
+        return (await SalaryBandProjections.RowForGradeAsync(db, listGrades, cmd.GradeId, cancellationToken))!;
     }
 }
 
