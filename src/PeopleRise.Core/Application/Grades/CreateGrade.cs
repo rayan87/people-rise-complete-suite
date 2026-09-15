@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Events;
 using PeopleRise.Core.Domain;
 using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -9,7 +10,7 @@ namespace PeopleRise.Core.Application.Grades;
 
 public sealed record CreateGradeCommand(string Code, string NameEn, string? NameAr, int Rank, Guid LevelId);
 
-internal sealed class CreateGradeHandler(CoreDbContext db)
+internal sealed class CreateGradeHandler(CoreDbContext db, IEventPublisher events)
     : ICommandHandler<CreateGradeCommand, Result<GradeDto>>
 {
     public async Task<Result<GradeDto>> Handle(CreateGradeCommand cmd, CancellationToken ct)
@@ -27,7 +28,8 @@ internal sealed class CreateGradeHandler(CoreDbContext db)
         var grade = Grade.Create(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank, cmd.LevelId);
         db.Grades.Add(grade);
         await db.SaveChangesAsync(ct);
-        return new GradeDto(grade.Id, grade.Code, grade.NameEn, grade.NameAr, grade.Rank, grade.LevelId, null);
+        await events.PublishAsync(new GradeCreated(grade.Id, grade.Code), ct);
+        return new GradeDto(grade.Id, grade.Code, grade.NameEn, grade.NameAr, grade.Rank, grade.LevelId, null, grade.Status.ToString());
     }
 }
 

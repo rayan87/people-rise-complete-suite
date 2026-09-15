@@ -1,26 +1,18 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Core.Application.Jobs;
 
-public sealed record ListJobsQuery();
+public sealed record ListJobsQuery(bool IncludeClosed = false);
 
 internal sealed class ListJobsHandler(CoreDbContext db)
     : IQueryHandler<ListJobsQuery, Result<IReadOnlyList<JobDto>>>
 {
     public async Task<Result<IReadOnlyList<JobDto>>> Handle(ListJobsQuery query, CancellationToken ct)
     {
-        var rows = await db.Jobs.OrderBy(j => j.Code).Select(j => new JobDto(
-            j.Id, j.Code, j.TitleEn, j.TitleAr, j.DescriptionEn, j.DescriptionAr,
-            j.JobFamilyId, j.JobFamily!.Code, j.JobFamily.NameEn, j.JobFamily.NameAr,
-            j.GradeId, j.Grade!.Code, j.Grade.NameEn, j.Grade.NameAr,
-            j.Grade!.LevelId, j.Grade.Level!.Code, j.Grade.Level.NameEn, j.Grade.Level.NameAr,
-            j.Status.ToString(),
-            j.GradeSource == null ? null : j.GradeSource.ToString()
-            )).ToListAsync(ct);
+        var rows = await JobProjections.ListAsync(db, query.IncludeClosed, ct);
         return Result<IReadOnlyList<JobDto>>.Success(rows);
     }
 }
@@ -29,7 +21,7 @@ internal static class ListJobsEndpoint
 {
     public static void MapListJobsEndpoint(this RouteGroupBuilder group)
     {
-        group.MapGet("/", async (ListJobsHandler h, CancellationToken ct) =>
-            (await h.Handle(new ListJobsQuery(), ct)).ToHttp());
+        group.MapGet("/", async (ListJobsHandler h, CancellationToken ct, bool includeClosed = false) =>
+            (await h.Handle(new ListJobsQuery(includeClosed), ct)).ToHttp());
     }
 }

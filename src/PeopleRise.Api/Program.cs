@@ -77,6 +77,7 @@ app.MapPost("/admin/tenants", async (CreateTenant input, ICurrentUser user,
     await Provisioning.CreateDatabaseAsync(configuration.GetConnectionString("Maintenance")!, dbName);
     var newTenantConn = factory.ForDatabase(dbName);
     await CoreModule.EnsureSchemaAsync(newTenantConn);   // core migrates first - modules may depend on its shape
+    await CoreModule.SeedReferenceDataAsync(newTenantConn);   // ISIC etc. - every tenant, regardless of what was bought
     await JobRewardModule.EnsureSchemaAsync(newTenantConn);
 
     var tenant = new Tenant
@@ -87,14 +88,15 @@ app.MapPost("/admin/tenants", async (CreateTenant input, ICurrentUser user,
     };
 
     cp.Tenants.Add(tenant);
-    cp.Access.Add(new UserTenantAccess 
-    { 
-        UserId = user.UserId, 
-        TenantId = tenant.Id, 
-        Role = AccessRole.Consultant 
+    cp.Access.Add(new UserTenantAccess
+    {
+        UserId = user.UserId,
+        TenantId = tenant.Id,
+        Role = AccessRole.Consultant
     });
 
     await cp.SaveChangesAsync();
+    await CoreModule.GrantFullAccessAsync(newTenantConn, user.UserId);   // first user gets a full-access role (Core Spec §3.6) - tenant data, editable afterward
     return Results.Created($"/admin/tenants/{tenant.Id}", new { tenant.Id, tenant.Name, tenant.DbName });
 });
 
@@ -124,14 +126,16 @@ app.MapPost("/admin/demo/el-delta", async (ICurrentUser user, ControlPlaneDbCont
     await Provisioning.CreateDatabaseAsync(configuration.GetConnectionString("Maintenance")!, dbName);
     var conn = factory.ForDatabase(dbName);
     await CoreModule.EnsureSchemaAsync(conn);
+    await CoreModule.SeedReferenceDataAsync(conn);   // ISIC etc., before Organization references a code
     await JobRewardModule.EnsureSchemaAsync(conn);
-    var coreSeed = await CoreModule.SeedElDeltaDemoAsync(conn);   // levels/families/grades/jobs first
+    var coreSeed = await CoreModule.SeedElDeltaDemoAsync(conn);   // organization/levels/families/grades/jobs/bands first
     var summary = await JobRewardModule.SeedElDeltaDemoAsync(conn, coreSeed);   // methodology/evaluations/bands
 
     var tenant = new Tenant { Name = "El-Delta", DbName = dbName, OwnerType = OwnerType.Client };
     cp.Tenants.Add(tenant);
     cp.Access.Add(new UserTenantAccess { UserId = user.UserId, TenantId = tenant.Id, Role = AccessRole.Consultant });
     await cp.SaveChangesAsync();
+    await CoreModule.GrantFullAccessAsync(conn, user.UserId);   // first user gets a full-access role (Core Spec §3.6) - tenant data, editable afterward
 
     return Results.Created($"/admin/tenants/{tenant.Id}", new
     {
@@ -156,6 +160,7 @@ app.MapGet("/admin/migrate-dbs", async (ControlPlaneDbContext controlPlaneDb,
         {
             var tenantConn = connectionFactory.ForDatabase(tenant.DbName);
             await CoreModule.EnsureSchemaAsync(tenantConn);   // core migrates first
+            await CoreModule.SeedReferenceDataAsync(tenantConn);   // idempotent - a later seed version is offered, never auto-applied
             await JobRewardModule.EnsureSchemaAsync(tenantConn);
             results.Add(new { tenant.Name, tenant.DbName, success = true, error = (string?)null });
         }
@@ -213,6 +218,7 @@ static class DevBootstrap
             await Provisioning.CreateDatabaseAsync(maintenance, dbName);
             var devTenantConn = factory.ForDatabase(dbName);
             await CoreModule.EnsureSchemaAsync(devTenantConn);   // core migrates first
+            await CoreModule.SeedReferenceDataAsync(devTenantConn);
             await JobRewardModule.EnsureSchemaAsync(devTenantConn);
 
             var tenant = new Tenant 
@@ -223,14 +229,15 @@ static class DevBootstrap
             };
 
             controlPlaneDb.Tenants.Add(tenant);
-            controlPlaneDb.Access.Add(new UserTenantAccess 
-            { 
-                UserId = DevUserId, 
-                TenantId = tenant.Id, 
-                Role = AccessRole.Consultant 
+            controlPlaneDb.Access.Add(new UserTenantAccess
+            {
+                UserId = DevUserId,
+                TenantId = tenant.Id,
+                Role = AccessRole.Consultant
             });
 
             await controlPlaneDb.SaveChangesAsync();
+            await CoreModule.GrantFullAccessAsync(devTenantConn, DevUserId);   // dev user gets a full-access role (Core Spec §3.6)
             app.Logger.LogInformation("Seeded demo tenant {TenantId} (db {Db})", tenant.Id, dbName);
         }
 

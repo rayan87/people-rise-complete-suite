@@ -8,6 +8,9 @@ namespace PeopleRise.Core.Application.JobFamilies;
 
 public sealed record DeleteJobFamilyCommand(Guid Id);
 
+// Closed, never deleted, once anything has referenced it (Core Spec §3.4). Jobs and salary bands
+// are never hard-deleted once referenced either, so checking current rows already covers full
+// history.
 internal sealed class DeleteJobFamilyHandler(CoreDbContext db)
     : ICommandHandler<DeleteJobFamilyCommand, Result<bool>>
 {
@@ -20,9 +23,15 @@ internal sealed class DeleteJobFamilyHandler(CoreDbContext db)
             return Error.NotFound("Job family not found.");
         }
 
-        var jobCount = await db.Jobs.CountAsync(j => j.JobFamilyId == cmd.Id, ct);
-        if (jobCount > 0)
-            return Error.Conflict($"Job family is in use by {jobCount} job(s) — reassign them before deleting.");
+        var everReferenced = await db.Jobs.AnyAsync(j => j.JobFamilyId == cmd.Id, ct)
+            || await db.SalaryBands.AnyAsync(b => b.JobFamilyId == cmd.Id, ct);
+
+        if (everReferenced)
+        {
+            family.Close();
+            await db.SaveChangesAsync(ct);
+            return Result<bool>.Success(true);
+        }
 
         db.JobFamilies.Remove(family);
         await db.SaveChangesAsync(ct);

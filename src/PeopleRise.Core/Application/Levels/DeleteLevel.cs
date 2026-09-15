@@ -8,6 +8,8 @@ namespace PeopleRise.Core.Application.Levels;
 
 public sealed record DeleteLevelCommand(Guid Id);
 
+// Closed, never deleted, once anything has referenced it (Core Spec §3.4). Grades are never
+// hard-deleted once referenced either, so checking current rows already covers full history.
 internal sealed class DeleteLevelHandler(CoreDbContext db)
     : ICommandHandler<DeleteLevelCommand, Result<bool>>
 {
@@ -20,11 +22,13 @@ internal sealed class DeleteLevelHandler(CoreDbContext db)
             return Error.NotFound("Level not found.");
         }
 
-        var gradeCount = await db.Grades.CountAsync(g => g.LevelId == cmd.Id, ct);
+        var everReferenced = await db.Grades.AnyAsync(g => g.LevelId == cmd.Id, ct);
 
-        if (gradeCount > 0)
+        if (everReferenced)
         {
-            return Error.Conflict($"Level is in use by {gradeCount} grade(s) — reassign them before deleting.");
+            level.Close();
+            await db.SaveChangesAsync(ct);
+            return Result<bool>.Success(true);
         }
 
         db.Levels.Remove(level);

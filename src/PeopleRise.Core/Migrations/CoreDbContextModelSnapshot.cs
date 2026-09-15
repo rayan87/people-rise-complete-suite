@@ -22,6 +22,183 @@ namespace PeopleRise.Core.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PeopleRise.Core.Domain.Certification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompetencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("competency_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateOnly>("IssuedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("issued_date");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("text")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_en");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompetencyId");
+
+                    b.ToTable("certifications");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.CompetencyDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DescriptionAr")
+                        .HasColumnType("text")
+                        .HasColumnName("description_ar");
+
+                    b.Property<string>("DescriptionEn")
+                        .HasColumnType("text")
+                        .HasColumnName("description_en");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("text")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_en");
+
+                    b.Property<string>("Provenance")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provenance");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("competency_definitions");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.CompetencyTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("JobFamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("job_family_id");
+
+                    b.Property<Guid>("LevelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("level_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobFamilyId");
+
+                    b.HasIndex("LevelId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_competency_templates_level_no_family")
+                        .HasFilter("job_family_id IS NULL");
+
+                    b.HasIndex("LevelId", "JobFamilyId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_competency_templates_level_family")
+                        .HasFilter("job_family_id IS NOT NULL");
+
+                    b.ToTable("competency_templates");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.CompetencyTemplateItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompetencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("competency_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("RequiredLevel")
+                        .HasColumnType("integer")
+                        .HasColumnName("required_level");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("template_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompetencyId");
+
+                    b.HasIndex("TemplateId", "CompetencyId")
+                        .IsUnique();
+
+                    b.ToTable("competency_template_items");
+                });
+
             modelBuilder.Entity("PeopleRise.Core.Domain.Employee", b =>
                 {
                     b.Property<Guid>("Id")
@@ -38,10 +215,28 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("text")
                         .HasColumnName("employee_no");
 
-                    b.Property<string>("FullName")
+                    b.Property<string>("EmploymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("employment_status");
+
+                    b.Property<string>("FullNameAr")
+                        .HasColumnType("text")
+                        .HasColumnName("full_name_ar");
+
+                    b.Property<string>("FullNameEn")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("full_name");
+                        .HasColumnName("full_name_en");
+
+                    b.Property<DateOnly>("HireDate")
+                        .HasColumnType("date")
+                        .HasColumnName("hire_date");
+
+                    b.Property<Guid?>("PrimaryLocationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_location_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -51,6 +246,8 @@ namespace PeopleRise.Core.Migrations
 
                     b.HasIndex("EmployeeNo")
                         .IsUnique();
+
+                    b.HasIndex("PrimaryLocationId");
 
                     b.ToTable("employees");
                 });
@@ -88,13 +285,73 @@ namespace PeopleRise.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmployeeId");
+                    b.HasIndex("EmployeeId")
+                        .IsUnique()
+                        .HasFilter("end_date IS NULL");
 
                     b.HasIndex("PositionId")
                         .IsUnique()
                         .HasFilter("end_date IS NULL");
 
                     b.ToTable("employee_assignments");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.EmployeePayElementAmount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("char(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<DateOnly>("EffectiveDate")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_date");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<Guid>("PayElementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pay_element_id");
+
+                    b.Property<string>("Provenance")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provenance");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayElementId");
+
+                    b.HasIndex("EmployeeId", "PayElementId")
+                        .IsUnique()
+                        .HasFilter("end_date IS NULL");
+
+                    b.ToTable("employee_pay_element_amounts");
                 });
 
             modelBuilder.Entity("PeopleRise.Core.Domain.Grade", b =>
@@ -130,6 +387,12 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("rank");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -145,6 +408,90 @@ namespace PeopleRise.Core.Migrations
                         .IsUnique();
 
                     b.ToTable("grades");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.HeldCompetencyProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompetencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("competency_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompetencyId");
+
+                    b.ToTable("held_competency_profiles");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.IndustryClassification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("level");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_en");
+
+                    b.Property<string>("ParentCode")
+                        .HasColumnType("text")
+                        .HasColumnName("parent_code");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("industry_classifications");
                 });
 
             modelBuilder.Entity("PeopleRise.Core.Domain.Job", b =>
@@ -170,15 +517,6 @@ namespace PeopleRise.Core.Migrations
                     b.Property<string>("DescriptionEn")
                         .HasColumnType("text")
                         .HasColumnName("description_en");
-
-                    b.Property<Guid?>("GradeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("grade_id");
-
-                    b.Property<string>("GradeSource")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("grade_source");
 
                     b.Property<Guid?>("JobFamilyId")
                         .HasColumnType("uuid")
@@ -207,8 +545,6 @@ namespace PeopleRise.Core.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
-
-                    b.HasIndex("GradeId");
 
                     b.HasIndex("JobFamilyId");
 
@@ -240,6 +576,12 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name_en");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -250,6 +592,54 @@ namespace PeopleRise.Core.Migrations
                         .IsUnique();
 
                     b.ToTable("job_families");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.JobGradeAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("EffectiveDate")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_date");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<Guid>("GradeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("grade_id");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("job_id");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GradeId");
+
+                    b.HasIndex("JobId")
+                        .IsUnique()
+                        .HasFilter("end_date IS NULL");
+
+                    b.ToTable("job_grade_assignments");
                 });
 
             modelBuilder.Entity("PeopleRise.Core.Domain.JobPosition", b =>
@@ -327,6 +717,12 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("rank");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -340,6 +736,51 @@ namespace PeopleRise.Core.Migrations
                         .IsUnique();
 
                     b.ToTable("levels");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.Location", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("City")
+                        .HasColumnType("text")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Country")
+                        .HasColumnType("text")
+                        .HasColumnName("country");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("text")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_en");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("locations");
                 });
 
             modelBuilder.Entity("PeopleRise.Core.Domain.OrgUnit", b =>
@@ -358,14 +799,28 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("Name")
+                    b.Property<Guid?>("LocationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("location_id");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("text")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("name");
+                        .HasColumnName("name_en");
 
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uuid")
                         .HasColumnName("parent_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -375,6 +830,8 @@ namespace PeopleRise.Core.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("LocationId");
 
                     b.HasIndex("ParentId");
 
@@ -397,6 +854,10 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("DefaultLocale")
+                        .HasColumnType("text")
+                        .HasColumnName("default_locale");
+
                     b.Property<int>("FiscalYearStartMonth")
                         .HasColumnType("integer")
                         .HasColumnName("fiscal_year_start_month");
@@ -404,6 +865,10 @@ namespace PeopleRise.Core.Migrations
                     b.Property<string>("IndustryCode")
                         .HasColumnType("text")
                         .HasColumnName("industry_code");
+
+                    b.Property<string>("IndustryOtherText")
+                        .HasColumnType("text")
+                        .HasColumnName("industry_other_text");
 
                     b.Property<string>("LegalNameAr")
                         .HasColumnType("text")
@@ -414,9 +879,23 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("text")
                         .HasColumnName("legal_name_en");
 
-                    b.Property<string>("Sector")
+                    b.Property<decimal?>("RamadanDailyHours")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("ramadan_daily_hours");
+
+                    b.Property<string>("SecondaryIndustryCodes")
                         .HasColumnType("text")
+                        .HasColumnName("secondary_industry_codes");
+
+                    b.Property<string>("Sector")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
                         .HasColumnName("sector");
+
+                    b.Property<string>("SupportedLanguages")
+                        .HasColumnType("text")
+                        .HasColumnName("supported_languages");
 
                     b.Property<string>("TradeNameAr")
                         .HasColumnType("text")
@@ -430,9 +909,347 @@ namespace PeopleRise.Core.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<string>("WeekendDays")
+                        .HasColumnType("text")
+                        .HasColumnName("weekend_days");
+
                     b.HasKey("Id");
 
                     b.ToTable("organizations");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.PayElement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Basis")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("basis");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("text")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_en");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("pay_elements");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.RequiredCompetencyOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AuthoredFrameworkVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("authored_framework_version");
+
+                    b.Property<Guid>("CompetencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("competency_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("job_id");
+
+                    b.Property<int?>("RequiredLevel")
+                        .HasColumnType("integer")
+                        .HasColumnName("required_level");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompetencyId");
+
+                    b.HasIndex("JobId", "CompetencyId")
+                        .IsUnique();
+
+                    b.ToTable("required_competency_overrides");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("text")
+                        .HasColumnName("name_ar");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_en");
+
+                    b.Property<string>("PermissionsCsv")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("permissions_csv");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("roles");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.RoleAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("UserId", "RoleId")
+                        .IsUnique();
+
+                    b.ToTable("role_assignments");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.SalaryBand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Basis")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("basis");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("char(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<DateOnly>("EffectiveDate")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_date");
+
+                    b.Property<Guid>("GradeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("grade_id");
+
+                    b.Property<decimal>("HalfSpreadPct")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("half_spread_pct");
+
+                    b.Property<Guid?>("JobFamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("job_family_id");
+
+                    b.Property<decimal>("MaxAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("max_amount");
+
+                    b.Property<decimal>("Midpoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("midpoint");
+
+                    b.Property<decimal>("MinAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("min_amount");
+
+                    b.Property<decimal?>("OverlapPct")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("overlap_pct");
+
+                    b.Property<string>("Provenance")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provenance");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GradeId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_salary_bands_grade_no_family_published")
+                        .HasFilter("status = 'Published' AND job_family_id IS NULL");
+
+                    b.HasIndex("GradeId", "JobFamilyId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_salary_bands_grade_family_published")
+                        .HasFilter("status = 'Published' AND job_family_id IS NOT NULL");
+
+                    b.ToTable("salary_bands", t =>
+                        {
+                            t.HasCheckConstraint("ck_band_order", "max_amount >= midpoint AND midpoint >= min_amount");
+                        });
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.SeedVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AppliedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("applied_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("seed_versions");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.Certification", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.CompetencyDefinition", "Competency")
+                        .WithMany()
+                        .HasForeignKey("CompetencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Competency");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.CompetencyTemplate", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.JobFamily", "JobFamily")
+                        .WithMany()
+                        .HasForeignKey("JobFamilyId");
+
+                    b.HasOne("PeopleRise.Core.Domain.Level", "Level")
+                        .WithMany()
+                        .HasForeignKey("LevelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("JobFamily");
+
+                    b.Navigation("Level");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.CompetencyTemplateItem", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.CompetencyDefinition", "Competency")
+                        .WithMany()
+                        .HasForeignKey("CompetencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Competency");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.Employee", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.Location", "PrimaryLocation")
+                        .WithMany()
+                        .HasForeignKey("PrimaryLocationId");
+
+                    b.Navigation("PrimaryLocation");
                 });
 
             modelBuilder.Entity("PeopleRise.Core.Domain.EmployeeAssignment", b =>
@@ -454,6 +1271,17 @@ namespace PeopleRise.Core.Migrations
                     b.Navigation("Position");
                 });
 
+            modelBuilder.Entity("PeopleRise.Core.Domain.EmployeePayElementAmount", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.PayElement", "PayElement")
+                        .WithMany()
+                        .HasForeignKey("PayElementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PayElement");
+                });
+
             modelBuilder.Entity("PeopleRise.Core.Domain.Grade", b =>
                 {
                     b.HasOne("PeopleRise.Core.Domain.Level", "Level")
@@ -465,19 +1293,43 @@ namespace PeopleRise.Core.Migrations
                     b.Navigation("Level");
                 });
 
+            modelBuilder.Entity("PeopleRise.Core.Domain.HeldCompetencyProfile", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.CompetencyDefinition", "Competency")
+                        .WithMany()
+                        .HasForeignKey("CompetencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Competency");
+                });
+
             modelBuilder.Entity("PeopleRise.Core.Domain.Job", b =>
                 {
-                    b.HasOne("PeopleRise.Core.Domain.Grade", "Grade")
-                        .WithMany()
-                        .HasForeignKey("GradeId");
-
                     b.HasOne("PeopleRise.Core.Domain.JobFamily", "JobFamily")
                         .WithMany()
                         .HasForeignKey("JobFamilyId");
 
+                    b.Navigation("JobFamily");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.JobGradeAssignment", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.Grade", "Grade")
+                        .WithMany()
+                        .HasForeignKey("GradeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PeopleRise.Core.Domain.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Grade");
 
-                    b.Navigation("JobFamily");
+                    b.Navigation("Job");
                 });
 
             modelBuilder.Entity("PeopleRise.Core.Domain.JobPosition", b =>
@@ -501,11 +1353,39 @@ namespace PeopleRise.Core.Migrations
 
             modelBuilder.Entity("PeopleRise.Core.Domain.OrgUnit", b =>
                 {
+                    b.HasOne("PeopleRise.Core.Domain.Location", "Location")
+                        .WithMany()
+                        .HasForeignKey("LocationId");
+
                     b.HasOne("PeopleRise.Core.Domain.OrgUnit", "Parent")
                         .WithMany()
                         .HasForeignKey("ParentId");
 
+                    b.Navigation("Location");
+
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.RequiredCompetencyOverride", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.CompetencyDefinition", "Competency")
+                        .WithMany()
+                        .HasForeignKey("CompetencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Competency");
+                });
+
+            modelBuilder.Entity("PeopleRise.Core.Domain.RoleAssignment", b =>
+                {
+                    b.HasOne("PeopleRise.Core.Domain.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
                 });
 #pragma warning restore 612, 618
         }

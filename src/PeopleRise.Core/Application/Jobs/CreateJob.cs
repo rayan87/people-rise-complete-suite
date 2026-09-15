@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Events;
 using PeopleRise.Core.Domain;
 using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -11,7 +12,7 @@ public sealed record CreateJobCommand(
     string Code, string TitleEn, string? TitleAr,
     string? DescriptionEn = null, string? DescriptionAr = null, Guid? JobFamilyId = null);
 
-internal sealed class CreateJobHandler(CoreDbContext db)
+internal sealed class CreateJobHandler(CoreDbContext db, IEventPublisher events)
     : ICommandHandler<CreateJobCommand, Result<JobDto>>
 {
     public async Task<Result<JobDto>> Handle(CreateJobCommand cmd, CancellationToken ct)
@@ -36,11 +37,13 @@ internal sealed class CreateJobHandler(CoreDbContext db)
 
         db.Jobs.Add(job);
         await db.SaveChangesAsync(ct);
+        await events.PublishAsync(new JobCreated(job.Id, job.Code), ct);
+        // A freshly created job has no grade assignment yet.
         return new JobDto(
             job.Id, job.Code, job.TitleEn, job.TitleAr, job.DescriptionEn, job.DescriptionAr,
             job.JobFamilyId, null, null, null,
-            job.GradeId, null, null, null,
-            null, null, null, null, job.Status.ToString(), null);
+            null, null, null, null,
+            null, null, null, null, job.Status.ToString(), null, null);
     }
 }
 

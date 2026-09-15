@@ -1,21 +1,24 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Application.Grades;
-using PeopleRise.Modules.JobReward.Domain;
-using PeopleRise.Modules.JobReward.Infrastructure;
+using PeopleRise.Core.Application.SalaryBands;
 using PeopleRise.SharedKernel;
 
 namespace PeopleRise.Modules.JobReward.Application.SalaryBands;
 
+public sealed record GenerateBandsRequest(decimal BaseMidpoint, decimal ProgressionPct, string Currency, DateOnly EffectiveDate);
+
 /// <summary>The Salary Builder's core action: build a band for every grade from a base midpoint and a
-/// grade-progression rate. Spread uses each band's own half-spread (25% default, see SalaryBand);
-/// overlap per grade is derived from consecutive midpoints. Upserts (updates existing grade bands).
-/// Provenance Designed - this is Compensation computing the band, not a manual entry.</summary>
+/// grade-progression rate - Compensation's own algorithm. SalaryBand itself lives in Core (Core Spec
+/// §9), so this only computes each grade's target midpoint and calls Core's public write path
+/// (SetDesignedBandCommand, provenance Designed) once per grade - Core owns persistence, the band
+/// arithmetic (spread/overlap derivation), and provenance handling.</summary>
 public sealed record GenerateBandsCommand(decimal BaseMidpoint, decimal ProgressionPct, string Currency, DateOnly EffectiveDate);
 
 internal sealed class GenerateBandsHandler(
-    JobRewardDbContext db, IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades)
+    IQueryHandler<ListGradesQuery, Result<IReadOnlyList<GradeDto>>> listGrades,
+    ICommandHandler<SetDesignedBandCommand, Result<SalaryBandRowDto>> setDesignedBand,
+    IQueryHandler<ListSalaryBandsQuery, Result<IReadOnlyList<SalaryBandRowDto>>> listSalaryBands)
     : ICommandHandler<GenerateBandsCommand, Result<IReadOnlyList<SalaryBandRowDto>>>
 {
     public async Task<Result<IReadOnlyList<SalaryBandRowDto>>> Handle(GenerateBandsCommand cmd, CancellationToken ct)
@@ -39,29 +42,22 @@ internal sealed class GenerateBandsHandler(
             return Error.Validation("There are no grades to build bands for.");
         }
 
-        var existing = (await db.SalaryBands.Where(b => b.JobFamilyId == null).ToListAsync(ct))
-            .ToDictionary(b => b.GradeId);
-
         decimal? previousMidpoint = null;
-        for (var i = 0; i < grades.Count; i++)
+        foreach (var grade in grades)
         {
             // The first grade seeds from the base midpoint; every grade after climbs by the
             // progression rate off the PREVIOUS (already-rounded) midpoint, rounded to the nearest 100.
             var raw = previousMidpoint is { } prev ? prev * (1m + cmd.ProgressionPct / 100m) : cmd.BaseMidpoint;
             var midpoint = Math.Round(raw / 100m, MidpointRounding.AwayFromZero) * 100m;
 
-            if (existing.TryGetValue(grades[i].Id, out var band))
-                band.Update(midpoint, previousMidpoint, cmd.Currency, cmd.EffectiveDate);
-            else
-                db.SalaryBands.Add(SalaryBand.Create(
-                    grades[i].Id, cmd.Currency, midpoint, previousMidpoint, cmd.EffectiveDate, BandProvenance.Designed));
+            var setResult = await setDesignedBand.Handle(
+                new SetDesignedBandCommand(grade.Id, cmd.Currency, midpoint, previousMidpoint, cmd.EffectiveDate), ct);
+            if (setResult.IsFailure) return setResult.Error!;
 
             previousMidpoint = midpoint;
         }
 
-        await db.SaveChangesAsync(ct);
-        var rows = await SalaryBandProjections.RowsAsync(db, listGrades, ct);
-        return Result<IReadOnlyList<SalaryBandRowDto>>.Success(rows);
+        return await listSalaryBands.Handle(new ListSalaryBandsQuery(), ct);
     }
 }
 

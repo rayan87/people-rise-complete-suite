@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Events;
 using PeopleRise.Core.Domain;
 using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
@@ -14,9 +15,12 @@ namespace PeopleRise.Core.Application.Jobs;
 // provenance).
 public enum GradeAssignmentSource { Evaluated, ManuallyAssigned }
 
-public sealed record AssignJobGradeCommand(Guid JobId, Guid GradeId, GradeAssignmentSource Source = GradeAssignmentSource.ManuallyAssigned);
+// EffectiveDate defaults to today; backdating is permitted (Core Spec §3.2b) by passing an earlier
+// date, as long as it stays after the job's current open assignment (no overlapping windows).
+public sealed record AssignJobGradeCommand(Guid JobId, Guid GradeId,
+    GradeAssignmentSource Source = GradeAssignmentSource.ManuallyAssigned, DateOnly? EffectiveDate = null);
 
-internal sealed class AssignJobGradeHandler(CoreDbContext db)
+internal sealed class AssignJobGradeHandler(CoreDbContext db, IEventPublisher events)
     : ICommandHandler<AssignJobGradeCommand, Result<JobDto>>
 {
     public async Task<Result<JobDto>> Handle(AssignJobGradeCommand cmd, CancellationToken ct)
@@ -27,10 +31,13 @@ internal sealed class AssignJobGradeHandler(CoreDbContext db)
         if (!gradeExists) return Error.NotFound("Grade not found.");
 
         var source = cmd.Source == GradeAssignmentSource.Evaluated ? GradeSource.Evaluated : GradeSource.ManuallyAssigned;
-        try { job.AssignGrade(cmd.GradeId, source); }
-        catch (DomainStateException e) { return Error.Conflict(e.Message); }
+        var effectiveDate = cmd.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var written = await GradeAssignmentWriter.AssignAsync(db, job, cmd.GradeId, source, effectiveDate, ct);
+        if (written.IsFailure) return written.Error!;
 
         await db.SaveChangesAsync(ct);
+        await events.PublishAsync(new JobGradeAssigned(job.Id, cmd.GradeId, source.ToString()), ct);
         return (await new GetJobHandler(db).Handle(new GetJobQuery(job.Id), ct));
     }
 }
@@ -40,7 +47,7 @@ internal static class AssignJobGradeEndpoint
     public static void MapAssignJobGradeEndpoint(this RouteGroupBuilder group) =>
         group.MapPost("/{id:guid}/grade", async (Guid id, AssignGradeRequest body,
                                                  AssignJobGradeHandler h, CancellationToken ct) =>
-            (await h.Handle(new AssignJobGradeCommand(id, body.GradeId), ct)).ToHttp());
+            (await h.Handle(new AssignJobGradeCommand(id, body.GradeId, GradeAssignmentSource.ManuallyAssigned, body.EffectiveDate), ct)).ToHttp());
 }
 
-public sealed record AssignGradeRequest(Guid GradeId);
+public sealed record AssignGradeRequest(Guid GradeId, DateOnly? EffectiveDate = null);

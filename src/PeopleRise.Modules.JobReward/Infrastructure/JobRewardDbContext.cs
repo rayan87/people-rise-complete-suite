@@ -19,13 +19,10 @@ internal class JobRewardDbContext(DbContextOptions<JobRewardDbContext> options) 
     public DbSet<Evaluation> Evaluations => Set<Evaluation>();
     public DbSet<EvaluationAnswer> EvaluationAnswers => Set<EvaluationAnswer>();
     public DbSet<EvaluationFactorScore> EvaluationFactorScores => Set<EvaluationFactorScore>();
-    // Salary
+    // Salary (market data / positioning only - SalaryBand itself lives in PeopleRise.Core)
     public DbSet<MarketDataSnapshot> MarketDataSnapshots => Set<MarketDataSnapshot>();
     public DbSet<MarketDataPoint> MarketDataPoints => Set<MarketDataPoint>();
     public DbSet<BandPositioningPolicy> BandPositioningPolicies => Set<BandPositioningPolicy>();
-    public DbSet<SalaryBand> SalaryBands => Set<SalaryBand>();
-    public DbSet<SalaryImportBatch> SalaryImportBatches => Set<SalaryImportBatch>();
-    public DbSet<EmployeeCompensation> EmployeeCompensations => Set<EmployeeCompensation>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -37,8 +34,6 @@ internal class JobRewardDbContext(DbContextOptions<JobRewardDbContext> options) 
         b.Entity<EvaluationAnswer>().HasIndex(x => new { x.EvaluationId, x.QuestionId, x.AnswerOptionId }).IsUnique();
 
         // mirror the DDL's check constraints
-        b.Entity<SalaryBand>().ToTable(t =>
-            t.HasCheckConstraint("ck_band_order", "max_amount >= midpoint AND midpoint >= min_amount"));
         b.Entity<GradeMapping>().ToTable(t =>
             t.HasCheckConstraint("ck_grade_mapping_score", "max_score >= min_score"));
 

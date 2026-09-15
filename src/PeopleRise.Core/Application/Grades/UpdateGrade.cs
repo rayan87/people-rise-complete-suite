@@ -20,7 +20,7 @@ internal sealed class UpdateGradeHandler(CoreDbContext db)
 
         grade.Update(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank, cmd.LevelId);
         await db.SaveChangesAsync(ct);
-        return new GradeDto(grade.Id, grade.Code, grade.NameEn, grade.NameAr, grade.Rank, grade.LevelId, null);
+        return new GradeDto(grade.Id, grade.Code, grade.NameEn, grade.NameAr, grade.Rank, grade.LevelId, null, grade.Status.ToString());
     }
 }
 

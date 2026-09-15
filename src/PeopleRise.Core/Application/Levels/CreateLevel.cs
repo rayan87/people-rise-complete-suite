@@ -22,7 +22,7 @@ internal sealed class CreateLevelHandler(CoreDbContext db)
 
         db.Levels.Add(level);
         await db.SaveChangesAsync(ct);
-        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank);
+        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank, level.Status.ToString());
     }
 }
 

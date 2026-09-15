@@ -4,22 +4,35 @@ using PeopleRise.Core.Infrastructure;
 namespace PeopleRise.Core.Application.Demo;
 
 /// <summary>Ids of the core rows the El-Delta demo seed created, keyed by their business code, so
-/// JobReward's own seed phase (methodology, grade mappings, evaluations, salary bands) can resolve
-/// them without re-querying or re-creating anything.</summary>
+/// JobReward's own seed phase (methodology, grade mappings, evaluations) can resolve them without
+/// re-querying or re-creating anything.</summary>
 public sealed record ElDeltaCoreSeedResult(
     IReadOnlyDictionary<string, Guid> LevelIdsByCode,
     IReadOnlyDictionary<string, Guid> JobFamilyIdsByCode,
     IReadOnlyDictionary<string, Guid> GradeIdsByCode,
-    IReadOnlyDictionary<string, Guid> JobIdsByCode);
+    IReadOnlyDictionary<string, Guid> JobIdsByCode,
+    int SalaryBandsCreated);
 
-/// <summary>Seeds the core slice of the El-Delta demo dataset: the five levels, the twelve IT job
-/// families, the twelve-grade ladder, and the ~39 unGraded job definitions. Grading, evaluation,
-/// methodology, and salary bands are JobReward's own seed phase (ElDeltaDemoSeeder), which runs
-/// after this and consumes the ids returned here.</summary>
+/// <summary>Seeds the core slice of the El-Delta demo dataset: the Organization profile, the five
+/// levels, the twelve IT job families, the twelve-grade ladder (each with a salary band - Core Spec
+/// §9, bands live here now), and the ~39 unGraded job definitions. Grading, evaluation, and
+/// methodology are JobReward's own seed phase (ElDeltaDemoSeeder), which runs after this and
+/// consumes the ids returned here. Assumes IsicSeeder has already run (Program.cs calls
+/// CoreModule.SeedReferenceDataAsync before this).</summary>
 internal static class ElDeltaCoreSeeder
 {
     public static async Task<ElDeltaCoreSeedResult> SeedAsync(CoreDbContext db, CancellationToken ct = default)
     {
+        // ---- Organization profile (exactly one per tenant - Core Spec §4) ----
+        db.Organizations.Add(new()
+        {
+            LegalNameEn = "El-Delta for Information Technology", LegalNameAr = "الدلتا لتكنولوجيا المعلومات",
+            TradeNameEn = "El-Delta", TradeNameAr = "الدلتا",
+            IndustryCode = "J62", Sector = OrganizationSector.Private, BaseCurrency = "EGP",
+            FiscalYearStartMonth = 1, WeekendDays = "Friday,Saturday", RamadanDailyHours = 6m,
+            SupportedLanguages = "en,ar", DefaultLocale = "en-EG",
+        });
+
         // ---- Levels (El-Delta's five; C-level is not run through the evaluation questionnaire) ----
         var levelDefs = new (string Code, string En, string Ar, int Rank)[]
         {
@@ -63,6 +76,22 @@ internal static class ElDeltaCoreSeeder
         var grades = gradeDefs.ToDictionary(
             d => d.Code, d => Grade.Create(d.Code, $"Grade {d.Rank}", $"الدرجة {d.Rank}", d.Rank, levels[d.Level].Id));
         db.Grades.AddRange(grades.Values);
+
+        // ---- Salary bands (Farouk's defaults: 25% half-spread, 25% grade progression), EGP.
+        // Provenance Designed - mirrors the Compensation-generated path (GenerateBands / Core Spec
+        // §9 band arithmetic). Bands live in Core now, so this seeds directly rather than going
+        // through JobReward's seed phase. ----
+        var effective = new DateOnly(2026, 1, 1);
+        var bandCount = 0;
+        decimal? previousMidpoint = null;
+        foreach (var gradeDef in gradeDefs)
+        {
+            var raw = previousMidpoint is { } prev ? prev * 1.25m : 8000m;
+            var midpoint = Math.Round(raw / 100m, MidpointRounding.AwayFromZero) * 100m;
+            db.SalaryBands.Add(SalaryBand.Create(grades[gradeDef.Code].Id, "EGP", midpoint, previousMidpoint, effective, BandProvenance.Designed));
+            previousMidpoint = midpoint;
+            bandCount++;
+        }
 
         // ---- Jobs (bilingual titles, ungraded - JobReward's seed phase grades them via evaluation).
         // BC=Blue Collar, IC=Individual Contributor, SUP=Supervisory, MGR=Managerial, EXEC=C-Level ----
@@ -118,6 +147,7 @@ internal static class ElDeltaCoreSeeder
             levels.ToDictionary(kv => kv.Key, kv => kv.Value.Id),
             families.ToDictionary(kv => kv.Key, kv => kv.Value.Id),
             grades.ToDictionary(kv => kv.Key, kv => kv.Value.Id),
-            jobs.ToDictionary(kv => kv.Key, kv => kv.Value.Id));
+            jobs.ToDictionary(kv => kv.Key, kv => kv.Value.Id),
+            bandCount);
     }
 }

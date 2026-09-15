@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using PeopleRise.Core.Application.Events;
 using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
 
@@ -10,7 +11,7 @@ public sealed record UpdateJobCommand(
     Guid Id, string Code, string TitleEn, string? TitleAr,
     string? DescriptionEn = null, string? DescriptionAr = null, Guid? JobFamilyId = null);
 
-internal sealed class UpdateJobHandler(CoreDbContext db)
+internal sealed class UpdateJobHandler(CoreDbContext db, IEventPublisher events)
     : ICommandHandler<UpdateJobCommand, Result<JobDto>>
 {
     public async Task<Result<JobDto>> Handle(UpdateJobCommand cmd, CancellationToken ct)
@@ -21,15 +22,17 @@ internal sealed class UpdateJobHandler(CoreDbContext db)
         if (cmd.JobFamilyId is { } fid && !await db.JobFamilies.AnyAsync(f => f.Id == fid, ct))
             return Error.NotFound("Job family not found.");
 
+        var previousJobFamilyId = job.JobFamilyId;
         job.Update(cmd.Code, cmd.TitleEn, cmd.TitleAr,
                    cmd.DescriptionEn, cmd.DescriptionAr, cmd.JobFamilyId);
         await db.SaveChangesAsync(ct);
 
-        return new JobDto(
-            job.Id, job.Code, job.TitleEn, job.TitleAr, job.DescriptionEn, job.DescriptionAr,
-            job.JobFamilyId, null, null, null,
-            job.GradeId, null, null, null,
-            null, null, null, null, job.Status.ToString(), job.GradeSource?.ToString());
+        if (previousJobFamilyId != job.JobFamilyId)
+            await events.PublishAsync(new JobFamilyChanged(job.Id, job.JobFamilyId), ct);
+
+        // Update never touches grade - fetch it fresh rather than re-deriving here (it's a query,
+        // not a column - Core Spec §3.2b).
+        return (await JobProjections.ByIdAsync(db, job.Id, ct))!;
     }
 }
 

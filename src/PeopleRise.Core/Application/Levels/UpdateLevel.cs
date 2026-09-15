@@ -26,7 +26,7 @@ internal sealed class UpdateLevelHandler(CoreDbContext db)
 
         level.Update(cmd.Code, cmd.NameEn, cmd.NameAr, cmd.Rank);
         await db.SaveChangesAsync(ct);
-        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank);
+        return new LevelDto(level.Id, level.Code, level.NameEn, level.NameAr, level.Rank, level.Status.ToString());
     }
 }
 

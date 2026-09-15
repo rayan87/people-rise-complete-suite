@@ -21,7 +21,7 @@ internal sealed class CreateJobFamilyHandler(CoreDbContext db)
         var family = JobFamily.Create(cmd.Code, cmd.NameEn, cmd.NameAr);
         db.JobFamilies.Add(family);
         await db.SaveChangesAsync(ct);
-        return new JobFamilyDto(family.Id, family.Code, family.NameEn, family.NameAr);
+        return new JobFamilyDto(family.Id, family.Code, family.NameEn, family.NameAr, family.Status.ToString());
     }
 }
 

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,13 +69,15 @@ public static class JobRewardModule
         return result.Summary;
     }
 
-    /// <summary>Maps every submodule's tenant-scoped endpoints. Levels/Grades/JobFamilies/Jobs are
-    /// mapped by CoreModule.MapCoreEndpoints instead - see Program.cs.</summary>
+    /// <summary>Maps every submodule's tenant-scoped endpoints. Levels/Grades/JobFamilies/Jobs and
+    /// the "/salary-bands" list/create/update endpoints are mapped by CoreModule.MapCoreEndpoints
+    /// instead - see Program.cs. Only "/salary-bands/generate" (Compensation's own algorithm) is
+    /// mapped here, under the same prefix.</summary>
     public static IEndpointRouteBuilder MapJobRewardEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapMethodologyEndpoints();
         app.MapEvaluationEndpoints();
-        app.MapSalaryBandEndpoints();
+        app.MapGroup("/salary-bands").MapGenerateBandsEndpoint();
         return app;
     }
 }

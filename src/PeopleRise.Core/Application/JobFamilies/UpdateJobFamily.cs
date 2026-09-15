@@ -26,7 +26,7 @@ internal sealed class UpdateJobFamilyHandler(CoreDbContext db)
 
         family.Update(cmd.Code, cmd.NameEn, cmd.NameAr);
         await db.SaveChangesAsync(ct);
-        return new JobFamilyDto(family.Id, family.Code, family.NameEn, family.NameAr);
+        return new JobFamilyDto(family.Id, family.Code, family.NameEn, family.NameAr, family.Status.ToString());
     }
 }
 

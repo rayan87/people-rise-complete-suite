@@ -111,46 +111,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                     b.ToTable("band_positioning_policies");
                 });
 
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.EmployeeCompensation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<decimal>("BaseSalary")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("base_salary");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("char(3)")
-                        .HasColumnName("currency");
-
-                    b.Property<DateOnly>("EffectiveDate")
-                        .HasColumnType("date")
-                        .HasColumnName("effective_date");
-
-                    b.Property<Guid>("EmployeeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("employee_id");
-
-                    b.Property<Guid?>("ImportBatchId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("import_batch_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ImportBatchId");
-
-                    b.ToTable("employee_compensations");
-                });
-
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Evaluation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -639,125 +599,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                     b.ToTable("questions");
                 });
 
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.SalaryBand", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("char(3)")
-                        .HasColumnName("currency");
-
-                    b.Property<DateOnly>("EffectiveDate")
-                        .HasColumnType("date")
-                        .HasColumnName("effective_date");
-
-                    b.Property<Guid>("GradeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("grade_id");
-
-                    b.Property<decimal>("HalfSpreadPct")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("half_spread_pct");
-
-                    b.Property<Guid?>("JobFamilyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("job_family_id");
-
-                    b.Property<decimal>("MaxAmount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("max_amount");
-
-                    b.Property<decimal>("Midpoint")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("midpoint");
-
-                    b.Property<decimal>("MinAmount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("min_amount");
-
-                    b.Property<decimal?>("OverlapPct")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("overlap_pct");
-
-                    b.Property<Guid?>("PositioningId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("positioning_id");
-
-                    b.Property<string>("Provenance")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("provenance");
-
-                    b.Property<Guid?>("SourceSnapshotId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_snapshot_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("status");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("salary_bands", t =>
-                        {
-                            t.HasCheckConstraint("ck_band_order", "max_amount >= midpoint AND midpoint >= min_amount");
-                        });
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.SalaryImportBatch", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Filename")
-                        .HasColumnType("text")
-                        .HasColumnName("filename");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text")
-                        .HasColumnName("note");
-
-                    b.Property<int?>("RowCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("row_count");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("source");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("salary_import_batches");
-                });
-
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.AnswerOption", b =>
                 {
                     b.HasOne("PeopleRise.Modules.JobReward.Domain.Question", "Question")
@@ -767,15 +608,6 @@ namespace PeopleRise.Modules.JobReward.Migrations
                         .IsRequired();
 
                     b.Navigation("Question");
-                });
-
-            modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.EmployeeCompensation", b =>
-                {
-                    b.HasOne("PeopleRise.Modules.JobReward.Domain.SalaryImportBatch", "ImportBatch")
-                        .WithMany()
-                        .HasForeignKey("ImportBatchId");
-
-                    b.Navigation("ImportBatch");
                 });
 
             modelBuilder.Entity("PeopleRise.Modules.JobReward.Domain.Evaluation", b =>

@@ -395,25 +395,13 @@ internal static class ElDeltaDemoSeeder
             evalCount++;
         }
 
-        // ---- Salary bands (Farouk's defaults: 25% half-spread, 25% grade progression), EGP.
-        // Provenance Designed - mirrors the Compensation-generated path (GenerateBands). ----
-        var effective = new DateOnly(2026, 1, 1);
-        var bandCount = 0;
-        decimal? previousMidpoint = null;
-        foreach (var gradeCode in gradeCodesInRankOrder)
-        {
-            var raw = previousMidpoint is { } prev ? prev * 1.25m : 8000m;
-            var midpoint = Math.Round(raw / 100m, MidpointRounding.AwayFromZero) * 100m;
-            db.SalaryBands.Add(SalaryBand.Create(grades[gradeCode], "EGP", midpoint, previousMidpoint, effective, BandProvenance.Designed));
-            previousMidpoint = midpoint;
-            bandCount++;
-        }
-
+        // Salary bands are seeded in Core now (ElDeltaCoreSeeder) - SalaryBand is a core entity
+        // (Core Spec §9), so there is nothing for this module's phase to do here any more.
         await db.SaveChangesAsync(ct);
 
         var summary = new DemoSeedSummary(
             Levels: coreSeed.LevelIdsByCode.Count, JobFamilies: coreSeed.JobFamilyIdsByCode.Count,
-            Grades: grades.Count, Jobs: jobs.Count, Evaluations: evalCount, SalaryBands: bandCount);
+            Grades: grades.Count, Jobs: jobs.Count, Evaluations: evalCount, SalaryBands: coreSeed.SalaryBandsCreated);
         return (summary, gradeAssignments);
     }
 }
