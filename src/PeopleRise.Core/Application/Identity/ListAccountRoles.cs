@@ -1,35 +1,32 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Domain;
-using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
 
-namespace PeopleRise.Core.Application.Permissions;
+namespace PeopleRise.Core.Application.Identity;
 
-public sealed record ListRoleAssignmentsQuery(Guid? UserId = null);
+public sealed record ListAccountRolesQuery(Guid AccountId);
 
-internal sealed class ListRoleAssignmentsHandler(CoreDbContext db)
-    : IQueryHandler<ListRoleAssignmentsQuery, Result<IReadOnlyList<RoleAssignmentDto>>>
+internal sealed class ListAccountRolesHandler(UserManager<Account> users)
+    : IQueryHandler<ListAccountRolesQuery, Result<IReadOnlyList<string>>>
 {
-    public async Task<Result<IReadOnlyList<RoleAssignmentDto>>> Handle(ListRoleAssignmentsQuery query, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<string>>> Handle(ListAccountRolesQuery query, CancellationToken ct)
     {
-        var q = db.RoleAssignments.AsQueryable();
-        if (query.UserId is { } userId) q = q.Where(a => a.UserId == userId);
+        var account = await users.FindByIdAsync(query.AccountId.ToString());
+        if (account is null) return Error.NotFound("Account not found.");
 
-        var rows = await q.OrderBy(a => a.UserId)
-            .Select(a => new RoleAssignmentDto(a.Id, a.UserId, a.RoleId, a.Role!.NameEn))
-            .ToListAsync(ct);
-        return Result<IReadOnlyList<RoleAssignmentDto>>.Success(rows);
+        var roleNames = await users.GetRolesAsync(account);
+        return Result<IReadOnlyList<string>>.Success(roleNames.ToList());
     }
 }
 
-internal static class ListRoleAssignmentsEndpoint
+internal static class ListAccountRolesEndpoint
 {
-    public static void MapListRoleAssignmentsEndpoint(this RouteGroupBuilder group)
+    public static void MapListAccountRolesEndpoint(this RouteGroupBuilder group)
     {
-        group.MapGet("/assignments", async (ListRoleAssignmentsHandler h, CancellationToken ct, Guid? userId = null) =>
-            (await h.Handle(new ListRoleAssignmentsQuery(userId), ct)).ToHttp())
+        group.MapGet("/{id:guid}/roles", async (Guid id, ListAccountRolesHandler h, CancellationToken ct) =>
+            (await h.Handle(new ListAccountRolesQuery(id), ct)).ToHttp())
             .RequirePermission(Permission.ManagePermissions);
     }
 }

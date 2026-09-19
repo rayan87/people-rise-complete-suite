@@ -96,7 +96,8 @@ app.MapPost("/admin/tenants", async (CreateTenant input, ICurrentUser user,
     });
 
     await cp.SaveChangesAsync();
-    await CoreModule.GrantFullAccessAsync(newTenantConn, user.UserId);   // first user gets a full-access role (Core Spec §3.6) - tenant data, editable afterward
+    var appUser = await cp.Users.FindAsync(user.UserId);
+    await CoreModule.ProvisionAdminAccountAsync(newTenantConn, user.UserId, appUser!.Email);   // first user gets an Admin account (Core Spec §11.2) - tenant data, editable afterward
     return Results.Created($"/admin/tenants/{tenant.Id}", new { tenant.Id, tenant.Name, tenant.DbName });
 });
 
@@ -135,7 +136,8 @@ app.MapPost("/admin/demo/el-delta", async (ICurrentUser user, ControlPlaneDbCont
     cp.Tenants.Add(tenant);
     cp.Access.Add(new UserTenantAccess { UserId = user.UserId, TenantId = tenant.Id, Role = AccessRole.Consultant });
     await cp.SaveChangesAsync();
-    await CoreModule.GrantFullAccessAsync(conn, user.UserId);   // first user gets a full-access role (Core Spec §3.6) - tenant data, editable afterward
+    var appUser = await cp.Users.FindAsync(user.UserId);
+    await CoreModule.ProvisionAdminAccountAsync(conn, user.UserId, appUser!.Email);   // first user gets an Admin account (Core Spec §11.2) - tenant data, editable afterward
 
     return Results.Created($"/admin/tenants/{tenant.Id}", new
     {
@@ -237,7 +239,7 @@ static class DevBootstrap
             });
 
             await controlPlaneDb.SaveChangesAsync();
-            await CoreModule.GrantFullAccessAsync(devTenantConn, DevUserId);   // dev user gets a full-access role (Core Spec §3.6)
+            await CoreModule.ProvisionAdminAccountAsync(devTenantConn, DevUserId, "dev@peoplerise.local");   // dev user gets an Admin account (Core Spec §11.2)
             app.Logger.LogInformation("Seeded demo tenant {TenantId} (db {Db})", tenant.Id, dbName);
         }
 

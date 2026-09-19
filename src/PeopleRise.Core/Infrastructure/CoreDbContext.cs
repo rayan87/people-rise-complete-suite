@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Domain;
 using PeopleRise.SharedKernel;
@@ -5,10 +7,18 @@ using PeopleRise.SharedKernel;
 namespace PeopleRise.Core.Infrastructure;
 
 /// <summary>Per-tenant database for the Organization Builder core: Organization, Structure, Ladder,
-/// Establishment, Roster. Free, mandatory, present in every tenant. No product entity ever lives
-/// here - see the Core Specification for the boundary.</summary>
-internal class CoreDbContext(DbContextOptions<CoreDbContext> options) : DbContext(options)
+/// Establishment, Roster, and organization Identity (Core Spec §11 - Accounts/AccountRoles, the
+/// tenant-local identity system, deliberately unlinked from the control plane's AppUser). Free,
+/// mandatory, present in every tenant. No product entity ever lives here - see the Core
+/// Specification for the boundary.</summary>
+internal class CoreDbContext(DbContextOptions<CoreDbContext> options)
+    : IdentityDbContext<Account, AccountRole, Guid>(options)
 {
+    // Domain-language aliases over Identity's own Users/Roles DbSets.
+    public DbSet<Account> Accounts => Users;
+
+    public DbSet<AccountRole> AccountRoles => Roles;
+
     public DbSet<Organization> Organizations => Set<Organization>();
 
     public DbSet<Location> Locations => Set<Location>();
@@ -41,10 +51,6 @@ internal class CoreDbContext(DbContextOptions<CoreDbContext> options) : DbContex
 
     public DbSet<SeedVersion> SeedVersions => Set<SeedVersion>();
 
-    public DbSet<Role> Roles => Set<Role>();
-
-    public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
-
     public DbSet<CompetencyDefinition> CompetencyDefinitions => Set<CompetencyDefinition>();
 
     public DbSet<CompetencyTemplate> CompetencyTemplates => Set<CompetencyTemplate>();
@@ -57,9 +63,28 @@ internal class CoreDbContext(DbContextOptions<CoreDbContext> options) : DbContex
 
     public DbSet<Certification> Certifications => Set<Certification>();
 
+    public DbSet<CareerPath> CareerPaths => Set<CareerPath>();
+
+    public DbSet<CareerPathStep> CareerPathSteps => Set<CareerPathStep>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
-        base.OnModelCreating(b);
+        base.OnModelCreating(b);   // Identity's own model: accounts, roles, claims, logins, tokens, user-roles
+
+        // Identity's default table names (AspNetUsers etc.) renamed to match this domain's language.
+        // ApplyConventions() below re-snakes whatever name is already set here.
+        b.Entity<Account>().ToTable("accounts");
+        b.Entity<AccountRole>().ToTable("account_roles");
+        b.Entity<IdentityUserRole<Guid>>().ToTable("account_role_assignments");
+        b.Entity<IdentityUserClaim<Guid>>().ToTable("account_claims");
+        b.Entity<IdentityUserLogin<Guid>>().ToTable("account_logins");
+        b.Entity<IdentityUserToken<Guid>>().ToTable("account_tokens");
+        b.Entity<IdentityRoleClaim<Guid>>().ToTable("account_role_claims");
+
+        // An account optionally points at an Employee (Core Spec §11: "not every employee has an
+        // account... not every account is an employee") - never the reverse, and never cascades.
+        b.Entity<Account>().HasOne(x => x.Employee).WithMany()
+            .HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.Restrict);
 
         // self-reference
         b.Entity<OrgUnit>().HasOne(x => x.Parent).WithMany().HasForeignKey(x => x.ParentId);
@@ -84,9 +109,6 @@ internal class CoreDbContext(DbContextOptions<CoreDbContext> options) : DbContex
         b.Entity<Location>().HasIndex(x => x.Code).IsUnique();
         b.Entity<CompetencyDefinition>().HasIndex(x => x.Code).IsUnique();
 
-        // one grant of a given role per user (Core Spec §3.6)
-        b.Entity<RoleAssignment>().HasIndex(x => new { x.UserId, x.RoleId }).IsUnique();
-
         // one template per (level, family) cell - JobFamilyId nullable, so the level-only fallback
         // cell needs its own index (Postgres treats NULLs as distinct - see the SalaryBand indexes
         // above for the same split).
@@ -100,6 +122,10 @@ internal class CoreDbContext(DbContextOptions<CoreDbContext> options) : DbContex
         // one item per competency within a template; one override per job+competency
         b.Entity<CompetencyTemplateItem>().HasIndex(x => new { x.TemplateId, x.CompetencyId }).IsUnique();
         b.Entity<RequiredCompetencyOverride>().HasIndex(x => new { x.JobId, x.CompetencyId }).IsUnique();
+
+        // a grade appears at most once, and at most one step order, within a given path (Core Spec §5)
+        b.Entity<CareerPathStep>().HasIndex(x => new { x.CareerPathId, x.GradeId }).IsUnique();
+        b.Entity<CareerPathStep>().HasIndex(x => new { x.CareerPathId, x.StepOrder }).IsUnique();
 
         // at most one OPEN assignment per position, AND per employee (partial unique indexes) -
         // Core Spec §8: "one primary assignment at a time", enforced from both directions.

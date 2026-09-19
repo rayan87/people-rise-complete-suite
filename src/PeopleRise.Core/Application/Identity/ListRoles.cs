@@ -1,25 +1,27 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Domain;
 using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
 
-namespace PeopleRise.Core.Application.Permissions;
+namespace PeopleRise.Core.Application.Identity;
 
 public sealed record ListRolesQuery(bool IncludeClosed = false);
 
-internal sealed class ListRolesHandler(CoreDbContext db)
+internal sealed class ListRolesHandler(CoreDbContext db, RoleManager<AccountRole> roles)
     : IQueryHandler<ListRolesQuery, Result<IReadOnlyList<RoleDto>>>
 {
     public async Task<Result<IReadOnlyList<RoleDto>>> Handle(ListRolesQuery query, CancellationToken ct)
     {
-        var q = db.Roles.AsQueryable();
+        var q = db.AccountRoles.AsQueryable();
         if (!query.IncludeClosed) q = q.Where(r => r.Status == RoleStatus.Active);
 
-        var rows = await q.OrderBy(r => r.NameEn).ToListAsync(ct);
-        return Result<IReadOnlyList<RoleDto>>.Success(
-            rows.Select(r => new RoleDto(r.Id, r.NameEn, r.NameAr, r.Permissions.Select(p => p.ToString()).ToList(), r.Status.ToString())).ToList());
+        var rows = await q.OrderBy(r => r.Name).ToListAsync(ct);
+        var dtos = new List<RoleDto>(rows.Count);
+        foreach (var role in rows) dtos.Add(await role.ToDtoAsync(roles));
+        return Result<IReadOnlyList<RoleDto>>.Success(dtos);
     }
 }
 

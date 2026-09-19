@@ -24,7 +24,8 @@ internal sealed class DeleteJobFamilyHandler(CoreDbContext db)
         }
 
         var everReferenced = await db.Jobs.AnyAsync(j => j.JobFamilyId == cmd.Id, ct)
-            || await db.SalaryBands.AnyAsync(b => b.JobFamilyId == cmd.Id, ct);
+            || await db.SalaryBands.AnyAsync(b => b.JobFamilyId == cmd.Id, ct)
+            || await db.CareerPaths.AnyAsync(p => p.JobFamilyId == cmd.Id, ct);
 
         if (everReferenced)
         {

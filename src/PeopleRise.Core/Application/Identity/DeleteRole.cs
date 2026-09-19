@@ -1,34 +1,38 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Domain;
-using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
 
-namespace PeopleRise.Core.Application.Permissions;
+namespace PeopleRise.Core.Application.Identity;
 
 public sealed record DeleteRoleCommand(Guid Id);
 
-// Closed, never deleted, once a user has ever been assigned it (Core Spec §3.4).
-internal sealed class DeleteRoleHandler(CoreDbContext db)
+// Closed, never deleted, once assigned to at least one account (Core Spec §3.4). The seeded Admin
+// role can never be deleted at all (§11.2), close or otherwise.
+internal sealed class DeleteRoleHandler(RoleManager<AccountRole> roles, UserManager<Account> users)
     : ICommandHandler<DeleteRoleCommand, Result<bool>>
 {
     public async Task<Result<bool>> Handle(DeleteRoleCommand cmd, CancellationToken ct)
     {
-        var role = await db.Roles.FindAsync(cmd.Id, ct);
+        var role = await roles.FindByIdAsync(cmd.Id.ToString());
         if (role is null) return Error.NotFound("Role not found.");
+        if (role.IsSystemOwned) return Error.Validation("The Admin role cannot be deleted.");
 
-        var everAssigned = await db.RoleAssignments.AnyAsync(a => a.RoleId == cmd.Id, ct);
-        if (everAssigned)
+        var members = await users.GetUsersInRoleAsync(role.Name!);
+        if (members.Count > 0)
         {
             role.Close();
-            await db.SaveChangesAsync(ct);
-            return Result<bool>.Success(true);
+            var closeResult = await roles.UpdateAsync(role);
+            return closeResult.Succeeded
+                ? Result<bool>.Success(true)
+                : Error.Validation(string.Join(' ', closeResult.Errors.Select(e => e.Description)));
         }
 
-        db.Roles.Remove(role);
-        await db.SaveChangesAsync(ct);
-        return Result<bool>.Success(true);
+        var deleteResult = await roles.DeleteAsync(role);
+        return deleteResult.Succeeded
+            ? Result<bool>.Success(true)
+            : Error.Validation(string.Join(' ', deleteResult.Errors.Select(e => e.Description)));
     }
 }
 

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Application.Events;
-using PeopleRise.Core.Application.Permissions;
+using PeopleRise.Core.Application.Identity;
 using PeopleRise.Core.Domain;
 using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;

@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Routing;
 using PeopleRise.SharedKernel;
 using PeopleRise.Tenancy;
 
-namespace PeopleRise.Core.Application.Permissions;
+namespace PeopleRise.Core.Application.Identity;
 
 // Permission gating is server-side; the UI mirrors it (CLAUDE.md/Core Spec §3.6) - a screen needs
 // to know its own caller's grants to decide what to render, without itself needing ManagePermissions.
+// UserId here is the tenant Account's id (§11: "the actor is always the account") - see
+// RequirePermissionFilter's doc comment for how ICurrentUser.UserId maps onto it today.
 public sealed record GetMyPermissionsQuery(Guid UserId);
 
 internal sealed class GetMyPermissionsHandler(IPermissionService permissions)
@@ -24,7 +26,7 @@ internal static class GetMyPermissionsEndpoint
 {
     public static void MapGetMyPermissionsEndpoint(this RouteGroupBuilder group)
     {
-        group.MapGet("/me", async (ICurrentUser user, GetMyPermissionsHandler h, CancellationToken ct) =>
+        group.MapGet("/me/permissions", async (ICurrentUser user, GetMyPermissionsHandler h, CancellationToken ct) =>
         {
             if (!user.IsAuthenticated) return Results.Unauthorized();
             return (await h.Handle(new GetMyPermissionsQuery(user.UserId), ct)).ToHttp();

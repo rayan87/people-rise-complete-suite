@@ -1,31 +1,33 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using PeopleRise.Core.Domain;
-using PeopleRise.Core.Infrastructure;
 using PeopleRise.SharedKernel;
 
-namespace PeopleRise.Core.Application.Permissions;
+namespace PeopleRise.Core.Application.Identity;
 
-public sealed record AssignRoleCommand(Guid UserId, Guid RoleId);
+public sealed record AssignRoleCommand(Guid AccountId, Guid RoleId);
 
-internal sealed class AssignRoleHandler(CoreDbContext db)
-    : ICommandHandler<AssignRoleCommand, Result<RoleAssignmentDto>>
+internal sealed class AssignRoleHandler(UserManager<Account> users, RoleManager<AccountRole> roles)
+    : ICommandHandler<AssignRoleCommand, Result<bool>>
 {
-    public async Task<Result<RoleAssignmentDto>> Handle(AssignRoleCommand cmd, CancellationToken ct)
+    public async Task<Result<bool>> Handle(AssignRoleCommand cmd, CancellationToken ct)
     {
-        var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == cmd.RoleId, ct);
+        var account = await users.FindByIdAsync(cmd.AccountId.ToString());
+        if (account is null) return Error.NotFound("Account not found.");
+
+        var role = await roles.FindByIdAsync(cmd.RoleId.ToString());
         if (role is null) return Error.NotFound("Role not found.");
 
-        if (await db.RoleAssignments.AnyAsync(a => a.UserId == cmd.UserId && a.RoleId == cmd.RoleId, ct))
+        if (await users.IsInRoleAsync(account, role.Name!))
         {
-            return Error.Conflict("This user already has this role.");
+            return Error.Conflict("This account already has this role.");
         }
 
-        var assignment = RoleAssignment.Create(cmd.UserId, cmd.RoleId);
-        db.RoleAssignments.Add(assignment);
-        await db.SaveChangesAsync(ct);
-        return new RoleAssignmentDto(assignment.Id, assignment.UserId, assignment.RoleId, role.NameEn);
+        var result = await users.AddToRoleAsync(account, role.Name!);
+        return result.Succeeded
+            ? Result<bool>.Success(true)
+            : Error.Validation(string.Join(' ', result.Errors.Select(e => e.Description)));
     }
 }
 
@@ -34,7 +36,7 @@ internal static class AssignRoleEndpoint
     public static void MapAssignRoleEndpoint(this RouteGroupBuilder group)
     {
         group.MapPost("/assignments", async (AssignRoleRequest body, AssignRoleHandler h, CancellationToken ct) =>
-            (await h.Handle(new AssignRoleCommand(body.UserId, body.RoleId), ct)).ToHttp())
+            (await h.Handle(new AssignRoleCommand(body.AccountId, body.RoleId), ct)).ToHttp())
             .RequirePermission(Permission.ManagePermissions);
     }
 }

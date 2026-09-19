@@ -1,31 +1,34 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using PeopleRise.Core.Domain;
-using PeopleRise.Core.Infrastructure;
 
-namespace PeopleRise.Core.Application.Permissions;
+namespace PeopleRise.Core.Application.Identity;
 
-/// <summary>Every product enforces access through this one model (Core Spec §3.6) - JobReward (or
-/// any future module) resolves this via DI, exactly like IEventPublisher/IEntitlementService,
-/// rather than querying Core's internal Role/RoleAssignment tables directly. Permission names are
-/// plain strings at this public boundary (see Domain.Permission for the vocabulary they parse
-/// against) - the same "enum crosses as a string" convention AssignJobGradeCommand's
-/// GradeAssignmentSource mirror and UpdateOrganizationCommand's Sector already use.</summary>
+/// <summary>Cross-module contract (registered in CoreModule, exactly like IEventPublisher/
+/// IEntitlementService) so any module can ask what an Account may do without reading Core's
+/// internal tables. <paramref name="accountId"/> is a tenant Account id (Core Spec §11: "the actor
+/// is always the account").</summary>
 public interface IPermissionService
 {
-    Task<IReadOnlySet<string>> GetGrantedPermissionsAsync(Guid userId, CancellationToken ct);
+    Task<IReadOnlySet<string>> GetGrantedPermissionsAsync(Guid accountId, CancellationToken ct);
 }
 
-internal sealed class PermissionService(CoreDbContext db) : IPermissionService
+internal sealed class PermissionService(UserManager<Account> users, RoleManager<AccountRole> roles) : IPermissionService
 {
-    public async Task<IReadOnlySet<string>> GetGrantedPermissionsAsync(Guid userId, CancellationToken ct)
+    public async Task<IReadOnlySet<string>> GetGrantedPermissionsAsync(Guid accountId, CancellationToken ct)
     {
-        var csvRows = await db.RoleAssignments
-            .Where(a => a.UserId == userId && a.Role!.Status == RoleStatus.Active)
-            .Select(a => a.Role!.PermissionsCsv)
-            .ToListAsync(ct);
+        var account = await users.FindByIdAsync(accountId.ToString());
+        if (account is null || account.Status != AccountStatus.Active) return new HashSet<string>();
 
-        return csvRows
-            .SelectMany(csv => csv.Split(',', StringSplitOptions.RemoveEmptyEntries))
-            .ToHashSet();
+        var granted = new HashSet<string>();
+        foreach (var roleName in await users.GetRolesAsync(account))
+        {
+            var role = await roles.FindByNameAsync(roleName);
+            if (role is null || role.Status != RoleStatus.Active) continue;
+
+            foreach (var claim in await roles.GetClaimsAsync(role))
+                if (claim.Type == AccountRole.PermissionClaimType) granted.Add(claim.Value);
+        }
+
+        return granted;
     }
 }

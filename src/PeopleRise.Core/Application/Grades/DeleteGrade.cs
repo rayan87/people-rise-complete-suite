@@ -27,7 +27,8 @@ internal sealed class DeleteGradeHandler(CoreDbContext db)
         }
 
         var everReferenced = await db.JobGradeAssignments.AnyAsync(a => a.GradeId == cmd.Id, ct)
-            || await db.SalaryBands.AnyAsync(b => b.GradeId == cmd.Id, ct);
+            || await db.SalaryBands.AnyAsync(b => b.GradeId == cmd.Id, ct)
+            || await db.CareerPathSteps.AnyAsync(s => s.GradeId == cmd.Id, ct);
 
         if (everReferenced)
         {
